@@ -1,0 +1,6 @@
+target/
+*.class
+*.war
+.m2/
+.claude/
+error.png

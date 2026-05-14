@@ -1,0 +1,34 @@
+{
+  "com.instana.plugin.javatrace": {
+    "instrumentation": {
+      "enabled": true,
+      "opentracing": true,
+      "sdk": true,
+      "enabled-technologies": [
+        "jaxrs",
+        "servlet",
+        "kafka-producer",
+        "kafka-consumer",
+        "cdi",
+        "ejb",
+        "jms"
+      ]
+    },
+    "tracing": {
+      "enabled": true,
+      "stack-trace-length": 50,
+      "max-exit-calls": 500,
+      "max-entry-calls": 500,
+      "detailed-errors": true
+    },
+    "instrumentation-scopes": [
+      {
+        "class-name-pattern": "com.example.camping.*",
+        "method-name-pattern": "*",
+        "capture-parameters": true,
+        "capture-return": true,
+        "capture-exception": true
+      }
+    ]
+  }
+}
