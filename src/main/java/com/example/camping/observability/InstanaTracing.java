@@ -72,7 +72,7 @@ public final class InstanaTracing {
     }
 
     private static void annotate(Span.Type spanType, String spanName, String key, String value) {
-        SpanSupport.annotate(spanType, spanName, key, safe(value));
+        SpanSupport.annotate(key, safe(value));
     }
 
     private static String safe(String value) {

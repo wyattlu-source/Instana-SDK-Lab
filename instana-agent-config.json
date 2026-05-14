@@ -3,7 +3,11 @@
     "instrumentation": {
       "enabled": true,
       "opentracing": true,
-      "sdk": true,
+      "sdk": {
+        "packages": [
+          "com.example.camping"
+        ]
+      },
       "enabled-technologies": [
         "jaxrs",
         "servlet",
@@ -20,15 +24,6 @@
       "max-exit-calls": 500,
       "max-entry-calls": 500,
       "detailed-errors": true
-    },
-    "instrumentation-scopes": [
-      {
-        "class-name-pattern": "com.example.camping.*",
-        "method-name-pattern": "*",
-        "capture-parameters": true,
-        "capture-return": true,
-        "capture-exception": true
-      }
-    ]
+    }
   }
 }

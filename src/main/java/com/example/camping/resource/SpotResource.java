@@ -15,19 +15,25 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import com.instana.sdk.support.SpanSupport;
+
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.LoggerFactory;
 
 @Path("/spot")
 @Produces(MediaType.APPLICATION_JSON)
 @RequestScoped
 public class SpotResource {
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SpotResource.class);
+
     @Inject
     SpotService spotService;
 
     @GET
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.SPOTS_HTTP_SPAN, capturedStackFrames = 5)
     public Map<String, Object> getSpots() {
+        LOGGER.warn("[INSTANA-CHECK] getSpots() called - isTracing=" + SpanSupport.isTracing());
         InstanaTracing.httpEntry(InstanaTracing.SPOTS_HTTP_SPAN, "GET", "/api/spot", 200);
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.SPOTS_HTTP_SPAN, SpotResource.class.getName(), "getSpots");
         return Map.of(
@@ -41,6 +47,7 @@ public class SpotResource {
     @Path("/{spotId}")
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.SPOT_DETAIL_HTTP_SPAN, captureArguments = true, capturedStackFrames = 5)
     public Map<String, Object> getSpot(@PathParam("spotId") @TagParam("spot_id") String spotId) {
+        LOGGER.warn("[INSTANA-CHECK] getSpot() called - spotId=" + spotId + " isTracing=" + SpanSupport.isTracing());
         InstanaTracing.httpEntry(InstanaTracing.SPOT_DETAIL_HTTP_SPAN, "GET", "/api/spot/{spotId}", 200);
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.SPOT_DETAIL_HTTP_SPAN, SpotResource.class.getName(), "getSpot");
         InstanaTracing.entry(InstanaTracing.SPOT_DETAIL_HTTP_SPAN, "tags.spot.id", spotId);

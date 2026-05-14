@@ -4,13 +4,16 @@ import com.example.camping.dto.SpotDto;
 import com.example.camping.observability.InstanaTracing;
 import com.instana.sdk.annotation.Span;
 import com.instana.sdk.annotation.TagParam;
+import com.instana.sdk.support.SpanSupport;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
 public class SpotService {
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SpotService.class);
     private static final List<SpotDto> FALLBACK_SPOTS = List.of(
             new SpotDto("11111111-1111-1111-1111-111111111111", "陽明山國家公園", "陽明山國家公園",
                     "台北近郊的山林營地，適合短程露營與自然健行。", 1200,
@@ -32,15 +35,17 @@ public class SpotService {
                     "/images/spot/Jiufen_Old_Street.jpg", "/images/spot/Jiufen_Old_Street.jpg")
     );
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LIST_SPAN, captureReturn = true, capturedStackFrames = 5)
+    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LIST_SPAN, capturedStackFrames = 5)
     public List<SpotDto> getSpots() {
+        LOGGER.warn("[INSTANA-CHECK] SpotService.getSpots() called - isTracing=" + SpanSupport.isTracing());
         InstanaTracing.method(InstanaTracing.SPOT_LIST_SPAN, SpotService.class.getName(), "getSpots");
         InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count", Integer.toString(FALLBACK_SPOTS.size()));
         return FALLBACK_SPOTS;
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LOOKUP_SPAN, captureArguments = true, captureReturn = true, capturedStackFrames = 5)
+    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LOOKUP_SPAN, capturedStackFrames = 5)
     public Optional<SpotDto> findById(@TagParam("spot_id") String spotId) {
+        LOGGER.warn("[INSTANA-CHECK] SpotService.findById() called - spotId=" + spotId + " isTracing=" + SpanSupport.isTracing());
         InstanaTracing.method(InstanaTracing.SPOT_LOOKUP_SPAN, SpotService.class.getName(), "findById");
         InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.id", spotId);
         return FALLBACK_SPOTS.stream()
