@@ -1,19 +1,16 @@
 package com.example.camping.service;
 
 import com.example.camping.dto.SpotDto;
-import com.example.camping.util.InstanaTracingUtil;
+import com.example.camping.observability.InstanaTracing;
 import com.instana.sdk.annotation.Span;
-import com.instana.sdk.support.SpanSupport;
+import com.instana.sdk.annotation.TagParam;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.logging.Logger;
 
 @ApplicationScoped
 public class SpotService {
-    private static final Logger LOGGER = Logger.getLogger(SpotService.class.getName());
-    
     private static final List<SpotDto> FALLBACK_SPOTS = List.of(
             new SpotDto("11111111-1111-1111-1111-111111111111", "陽明山國家公園", "陽明山國家公園",
                     "台北近郊的山林營地，適合短程露營與自然健行。", 1200,
@@ -35,59 +32,19 @@ public class SpotService {
                     "/images/spot/Jiufen_Old_Street.jpg", "/images/spot/Jiufen_Old_Street.jpg")
     );
 
-    @Span(value = "spot.service.getAll", type = Span.Type.INTERMEDIATE)
+    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LIST_SPAN, captureReturn = true, capturedStackFrames = 5)
     public List<SpotDto> getSpots() {
-        return InstanaTracingUtil.trace("SpotService.getSpots", () -> {
-            InstanaTracingUtil.markStep("1.access_fallback_data", "存取預設露營地點資料");
-            
-            InstanaTracingUtil.addBusinessTag("data.source", "FALLBACK_SPOTS");
-            InstanaTracingUtil.addBusinessTag("data.count", FALLBACK_SPOTS.size());
-            
-            // 追蹤每個地點的基本資訊
-            for (int i = 0; i < FALLBACK_SPOTS.size(); i++) {
-                SpotDto spot = FALLBACK_SPOTS.get(i);
-                InstanaTracingUtil.addBusinessTag("spot." + i + ".id", spot.getSpotId());
-                InstanaTracingUtil.addBusinessTag("spot." + i + ".name", spot.getSpotName());
-                InstanaTracingUtil.addBusinessTag("spot." + i + ".price", spot.getPrice());
-            }
-            
-            LOGGER.info("[INSTANA-TRACE] Returning " + FALLBACK_SPOTS.size() + " spots");
-            return FALLBACK_SPOTS;
-        });
+        InstanaTracing.method(InstanaTracing.SPOT_LIST_SPAN, SpotService.class.getName(), "getSpots");
+        InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count", Integer.toString(FALLBACK_SPOTS.size()));
+        return FALLBACK_SPOTS;
     }
 
-    @Span(value = "spot.service.findById", type = Span.Type.INTERMEDIATE)
-    public Optional<SpotDto> findById(String spotId) {
-        return InstanaTracingUtil.trace("SpotService.findById", () -> {
-            InstanaTracingUtil.markStep("1.search_in_list", "在清單中搜尋地點");
-            InstanaTracingUtil.addBusinessTag("search.spot_id", spotId);
-            
-            Optional<SpotDto> result = InstanaTracingUtil.trace("SpotService.streamFilter", () ->
-                FALLBACK_SPOTS.stream()
-                    .filter(spot -> {
-                        boolean matches = spot.getSpotId().equals(spotId);
-                        if (matches) {
-                            InstanaTracingUtil.addBusinessTag("match.found", true);
-                            InstanaTracingUtil.addBusinessTag("match.spot_name", spot.getSpotName());
-                            LOGGER.info("[INSTANA-TRACE] Match found: " + spot.getSpotName());
-                        }
-                        return matches;
-                    })
-                    .findFirst()
-            );
-            
-            InstanaTracingUtil.addBusinessTag("result.present", result.isPresent());
-            if (result.isPresent()) {
-                SpotDto spot = result.get();
-                InstanaTracingUtil.addBusinessTag("result.spot_id", spot.getSpotId());
-                InstanaTracingUtil.addBusinessTag("result.spot_name", spot.getSpotName());
-                InstanaTracingUtil.addBusinessTag("result.price", spot.getPrice());
-                LOGGER.info("[INSTANA-TRACE] Spot found: " + spot.getSpotName());
-            } else {
-                LOGGER.info("[INSTANA-TRACE] Spot not found for ID: " + spotId);
-            }
-            
-            return result;
-        });
+    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LOOKUP_SPAN, captureArguments = true, captureReturn = true, capturedStackFrames = 5)
+    public Optional<SpotDto> findById(@TagParam("spot_id") String spotId) {
+        InstanaTracing.method(InstanaTracing.SPOT_LOOKUP_SPAN, SpotService.class.getName(), "findById");
+        InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.id", spotId);
+        return FALLBACK_SPOTS.stream()
+                .filter(spot -> spot.getSpotId().equals(spotId))
+                .findFirst();
     }
 }

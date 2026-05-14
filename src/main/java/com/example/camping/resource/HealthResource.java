@@ -1,6 +1,8 @@
 package com.example.camping.resource;
 
 import com.example.camping.config.AppConfig;
+import com.example.camping.observability.InstanaTracing;
+import com.instana.sdk.annotation.Span;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -18,7 +20,10 @@ public class HealthResource {
     AppConfig config;
 
     @GET
+    @Span(type = Span.Type.ENTRY, value = InstanaTracing.HEALTH_HTTP_SPAN, capturedStackFrames = 5)
     public Map<String, Object> health() {
+        InstanaTracing.httpEntry(InstanaTracing.HEALTH_HTTP_SPAN, "GET", "/api/health", 200);
+        InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.HEALTH_HTTP_SPAN, HealthResource.class.getName(), "health");
         return Map.of(
                 "status", "healthy",
                 "spots", "fallback",

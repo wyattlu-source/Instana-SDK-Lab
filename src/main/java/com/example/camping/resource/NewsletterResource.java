@@ -1,8 +1,9 @@
 package com.example.camping.resource;
 
 import com.example.camping.dto.EmailPayload;
-import com.example.camping.util.InstanaTracingUtil;
+import com.example.camping.observability.InstanaTracing;
 import com.instana.sdk.annotation.Span;
+import com.instana.sdk.annotation.TagParam;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
@@ -14,13 +15,6 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.Map;
 import java.util.logging.Logger;
 
-/**
- * Newsletter Resource
- *
- * 追蹤層級：
- * 1. Instana Agent 自動追蹤：HTTP 請求、方法調用
- * 2. SDK 手動追蹤：訂閱者資訊、業務事件
- */
 @Path("/send_src_email")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -29,24 +23,21 @@ public class NewsletterResource {
     private static final Logger LOGGER = Logger.getLogger(NewsletterResource.class.getName());
 
     @POST
-    @Span(value = "newsletter.subscribe", type = Span.Type.ENTRY)
-    public Map<String, Object> subscribe(@Valid EmailPayload emailPayload) {
-        return InstanaTracingUtil.trace("NewsletterResource.subscribe", () -> {
-            InstanaTracingUtil.markStep("1.validate_email", "驗證電子郵件格式");
-            
-            String userEmail = emailPayload.getUserEmail();
-            InstanaTracingUtil.addBusinessTag("subscriber.email", userEmail);
-            
-            InstanaTracingUtil.markStep("2.process_subscription", "處理訂閱請求");
-            
-            LOGGER.info(() -> "Newsletter signup received: " + userEmail);
-            
-            InstanaTracingUtil.logBusinessEvent("NEWSLETTER_SIGNUP",
-                "New newsletter subscription: " + userEmail);
-            
-            InstanaTracingUtil.addBusinessTag("subscription.status", "success");
-            
-            return Map.of("success", true, "message", "Newsletter signup received");
-        });
+    @Span(type = Span.Type.ENTRY, value = InstanaTracing.NEWSLETTER_HTTP_SPAN, captureArguments = true, capturedStackFrames = 5)
+    public Map<String, Object> subscribe(@Valid @TagParam("email_payload") EmailPayload emailPayload) {
+        InstanaTracing.httpEntry(InstanaTracing.NEWSLETTER_HTTP_SPAN, "POST", "/api/send_src_email", 200);
+        InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.NEWSLETTER_HTTP_SPAN, NewsletterResource.class.getName(), "subscribe");
+        InstanaTracing.entry(InstanaTracing.NEWSLETTER_HTTP_SPAN, "tags.newsletter.email_domain", emailDomain(emailPayload.getUserEmail()));
+        LOGGER.info(() -> "Newsletter signup received: " + emailPayload.getUserEmail());
+        return Map.of("success", true, "message", "Newsletter signup received");
+    }
+
+    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.EMAIL_DOMAIN_SPAN, captureArguments = true, captureReturn = true)
+    private String emailDomain(@TagParam("email") String email) {
+        InstanaTracing.method(InstanaTracing.EMAIL_DOMAIN_SPAN, NewsletterResource.class.getName(), "emailDomain");
+        if (email == null || !email.contains("@")) {
+            return "unknown";
+        }
+        return email.substring(email.indexOf('@') + 1);
     }
 }
