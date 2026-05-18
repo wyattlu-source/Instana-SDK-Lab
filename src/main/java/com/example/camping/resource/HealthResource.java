@@ -19,6 +19,9 @@ public class HealthResource {
     @Inject
     AppConfig config;
 
+    @Inject
+    com.example.camping.config.MongoConfig mongoConfig;
+
     @GET
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.HEALTH_HTTP_SPAN, capturedStackFrames = 5)
     public Map<String, Object> health() {
@@ -31,7 +34,9 @@ public class HealthResource {
                 "topic", config.kafkaTopicName(),
                 "kafka_bootstrap_server", config.kafkaBootstrapServer(),
                 "schema_registry", config.schemaRegistryEndpoint(),
-                "ksqldb", config.ksqlDbEndpoint()
+                "ksqldb", config.ksqlDbEndpoint(),
+                "mongodb", mongoConfig.isAvailable() ? "connected"
+                        : "unavailable: " + mongoConfig.getLastError()
         );
     }
 }

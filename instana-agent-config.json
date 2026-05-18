@@ -5,7 +5,8 @@
       "opentracing": true,
       "sdk": {
         "packages": [
-          "com.example.camping"
+          "com.example.camping",
+          "com.example.spot"
         ]
       },
       "enabled-technologies": [

@@ -63,6 +63,10 @@ public class OrderPayload {
     @JsonbProperty("is_real")
     private Boolean isReal;
 
+    @JsonProperty("coupon_code")
+    @JsonbProperty("coupon_code")
+    private String couponCode;
+
     public String getEventType() {
         return eventType;
     }
@@ -181,5 +185,13 @@ public class OrderPayload {
 
     public void setIsReal(Boolean real) {
         isReal = real;
+    }
+
+    public String getCouponCode() {
+        return couponCode;
+    }
+
+    public void setCouponCode(String couponCode) {
+        this.couponCode = couponCode;
     }
 }

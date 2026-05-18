@@ -15,8 +15,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-import com.instana.sdk.support.SpanSupport;
-
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.LoggerFactory;
@@ -33,13 +32,15 @@ public class SpotResource {
     @GET
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.SPOTS_HTTP_SPAN, capturedStackFrames = 5)
     public Map<String, Object> getSpots() {
-        LOGGER.warn("[INSTANA-CHECK] getSpots() called - isTracing=" + SpanSupport.isTracing());
+        LOGGER.warn("[SPOT] getSpots() called");
         InstanaTracing.httpEntry(InstanaTracing.SPOTS_HTTP_SPAN, "GET", "/api/spot", 200);
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.SPOTS_HTTP_SPAN, SpotResource.class.getName(), "getSpots");
+        List<SpotDto> spots = spotService.getSpots();
+        LOGGER.warn("[SPOT] getSpots() returning " + spots.size() + " spots");
         return Map.of(
                 "success", true,
                 "message", "Spots retrieved successfully",
-                "data", spotService.getSpots()
+                "data", spots
         );
     }
 
@@ -47,23 +48,26 @@ public class SpotResource {
     @Path("/{spotId}")
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.SPOT_DETAIL_HTTP_SPAN, captureArguments = true, capturedStackFrames = 5)
     public Map<String, Object> getSpot(@PathParam("spotId") @TagParam("spot_id") String spotId) {
-        LOGGER.warn("[INSTANA-CHECK] getSpot() called - spotId=" + spotId + " isTracing=" + SpanSupport.isTracing());
+        LOGGER.warn("[SPOT] getSpot() called - spotId=" + spotId);
         InstanaTracing.httpEntry(InstanaTracing.SPOT_DETAIL_HTTP_SPAN, "GET", "/api/spot/{spotId}", 200);
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.SPOT_DETAIL_HTTP_SPAN, SpotResource.class.getName(), "getSpot");
         InstanaTracing.entry(InstanaTracing.SPOT_DETAIL_HTTP_SPAN, "tags.spot.id", spotId);
         try {
             UUID.fromString(spotId);
         } catch (IllegalArgumentException e) {
+            LOGGER.error("[SPOT] getSpot() invalid UUID - spotId=" + spotId, e);
             InstanaTracing.error(Span.Type.ENTRY, InstanaTracing.SPOT_DETAIL_HTTP_SPAN, e);
             throw new BadRequestException("Invalid spot id");
         }
 
         SpotDto spot = spotService.findById(spotId).orElseThrow(() -> {
             NotFoundException exception = new NotFoundException("Spot not found");
+            LOGGER.warn("[SPOT] getSpot() spot not found - spotId=" + spotId);
             InstanaTracing.error(Span.Type.ENTRY, InstanaTracing.SPOT_DETAIL_HTTP_SPAN, exception);
             return exception;
         });
 
+        LOGGER.warn("[SPOT] getSpot() found - spotId=" + spotId + " name=" + spot.getSpotName());
         return Map.of(
                 "success", true,
                 "message", "Spot retrieved successfully",

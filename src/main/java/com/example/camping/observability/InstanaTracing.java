@@ -4,6 +4,7 @@ import com.instana.sdk.annotation.Span;
 import com.instana.sdk.support.SpanSupport;
 
 public final class InstanaTracing {
+
     public static final String ROOT_HTTP_SPAN = "camping-api-root";
     public static final String HEALTH_HTTP_SPAN = "camping-api-health";
     public static final String SPOTS_HTTP_SPAN = "camping-api-list-spots";
@@ -12,6 +13,7 @@ public final class InstanaTracing {
     public static final String CHECKOUT_HTTP_SPAN = "camping-api-checkout";
     public static final String CHECKOUT_ASYNC_JOB_SPAN = "camping-checkout-async-job";
     public static final String FAVORITE_HTTP_SPAN = "camping-api-favorite";
+    public static final String FAVORITE_LIST_HTTP_SPAN = "camping-api-list-favorites";
     public static final String KAFKA_SEND_SPAN = "camping-kafka-checkout-send";
     public static final String KAFKA_RECORD_SPAN = "camping-kafka-record-build";
     public static final String KAFKA_PRODUCER_INIT_SPAN = "camping-kafka-producer-init";
@@ -20,6 +22,39 @@ public final class InstanaTracing {
     public static final String COUPON_CODE_SPAN = "camping-coupon-code";
     public static final String EMAIL_DOMAIN_SPAN = "camping-email-domain";
     public static final String PREFLIGHT_HTTP_SPAN = "camping-api-preflight";
+    public static final String HTTP_SPOT_SERVICE_SPAN = "camping-http-spot-service-exit";
+
+    // Shared utility spans
+    public static final String AUDIT_SPAN = "camping-audit-record";
+    public static final String ORDER_VALIDATE_SPAN = "camping-order-validate";
+    public static final String PRICING_SPAN = "camping-pricing-calculate";
+
+    // Auth spans
+    public static final String AUTH_REGISTER_HTTP_SPAN = "camping-auth-register";
+    public static final String AUTH_LOGIN_HTTP_SPAN = "camping-auth-login";
+    public static final String AUTH_LOGOUT_HTTP_SPAN = "camping-auth-logout";
+    public static final String AUTH_REGISTER_SERVICE_SPAN = "camping-auth-service-register";
+    public static final String AUTH_LOGIN_SERVICE_SPAN = "camping-auth-service-login";
+    public static final String AUTH_VERIFY_TOKEN_SPAN = "camping-auth-verify-token";
+    public static final String USER_REPO_SAVE_SPAN = "camping-user-repo-save";
+    public static final String USER_REPO_FIND_SPAN = "camping-user-repo-findByEmail";
+    public static final String USER_REPO_EXISTS_SPAN = "camping-user-repo-existsByEmail";
+
+    // Favorite repository spans
+    public static final String FAVORITE_REPO_SAVE_SPAN = "camping-favorite-repo-save";
+    public static final String FAVORITE_REPO_FIND_BY_USER_SPAN = "camping-favorite-repo-findByUserId";
+    public static final String FAVORITE_REPO_FIND_ACTIVE_SPAN = "camping-favorite-repo-findActiveByUserId";
+    public static final String FAVORITE_REPO_EXISTS_SPAN = "camping-favorite-repo-existsByUserAndSpot";
+    public static final String FAVORITE_REPO_CANCEL_SPAN = "camping-favorite-repo-cancelFavorite";
+    public static final String FAVORITE_REPO_REACTIVATE_SPAN = "camping-favorite-repo-reactivateFavorite";
+
+    // Coupon repository spans
+    public static final String COUPON_REPO_SAVE_SPAN = "camping-coupon-repo-save";
+    public static final String COUPON_REPO_FIND_BY_USER_SPAN = "camping-coupon-repo-findByUserId";
+    public static final String COUPON_REPO_FIND_AVAILABLE_SPAN = "camping-coupon-repo-findAvailableCoupons";
+    public static final String COUPON_REPO_FIND_BY_CODE_SPAN = "camping-coupon-repo-findByCouponCode";
+    public static final String COUPON_REPO_USE_SPAN = "camping-coupon-repo-useCoupon";
+    public static final String COUPON_REPO_EXPIRE_SPAN = "camping-coupon-repo-expireOldCoupons";
 
     private InstanaTracing() {
     }

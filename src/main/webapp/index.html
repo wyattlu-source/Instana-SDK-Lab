@@ -5,20 +5,300 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Camping - 露營旅遊預訂平台</title>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script type="module" crossorigin src="./assets/index-BJiIS0NR.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-Cr0BHlHC.js">
     <link rel="modulepreload" crossorigin href="./assets/vendor-JJQFPHdA.js">
     <link rel="stylesheet" crossorigin href="./assets/index-BQqgxKSf.css">
+
+    <style>
+      #camp-auth-modal {
+        display: none; position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+      }
+      #camp-auth-modal.open { display: flex; }
+      #camp-auth-box {
+        background: #fff; border-radius: 12px; padding: 36px 32px;
+        width: 360px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+        position: relative; font-family: 'Open Sans', sans-serif;
+      }
+      #camp-auth-box h2 { margin: 0 0 20px; font-size: 1.4rem; color: #2d6a4f; }
+      #camp-auth-box .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; }
+      #camp-auth-box .tab-btn {
+        flex: 1; padding: 8px; border: 2px solid #2d6a4f; border-radius: 6px;
+        background: #fff; color: #2d6a4f; cursor: pointer; font-size: 0.95rem; font-weight: 600;
+      }
+      #camp-auth-box .tab-btn.active { background: #2d6a4f; color: #fff; }
+      #camp-auth-box input {
+        width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 12px;
+        border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem;
+      }
+      #camp-auth-box .auth-submit {
+        width: 100%; padding: 11px; background: #2d6a4f; color: #fff;
+        border: none; border-radius: 6px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 4px;
+      }
+      #camp-auth-box .auth-submit:hover { background: #1b4332; }
+      #camp-auth-box .auth-msg { margin-top: 10px; font-size: 0.88rem; min-height: 20px; }
+      #camp-auth-box .auth-msg.err { color: #c0392b; }
+      #camp-auth-box .auth-msg.ok { color: #2d6a4f; }
+      #camp-auth-close {
+        position: absolute; top: 12px; right: 16px; font-size: 1.3rem;
+        background: none; border: none; cursor: pointer; color: #666;
+      }
+      #camp-user-bar {
+        position: fixed; top: 0; right: 0; z-index: 9998;
+        background: #2d6a4f; color: #fff; padding: 6px 16px;
+        font-size: 0.85rem; font-family: 'Open Sans', sans-serif;
+        border-bottom-left-radius: 8px; display: none; align-items: center; gap: 12px;
+      }
+      #camp-user-bar.show { display: flex; }
+      #camp-logout-btn {
+        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
+        color: #fff; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.82rem;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- User bar (shown when logged in) -->
+    <div id="camp-user-bar">
+      <span id="camp-user-name"></span>
+      <button id="camp-logout-btn">登出</button>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="camp-auth-modal">
+      <div id="camp-auth-box">
+        <button id="camp-auth-close">✕</button>
+        <h2 id="camp-auth-title">登入</h2>
+        <div class="tab-btns">
+          <button class="tab-btn active" id="tab-login">登入</button>
+          <button class="tab-btn" id="tab-register">註冊</button>
+        </div>
+        <div id="camp-login-form">
+          <input type="email" id="login-email" placeholder="Email" />
+          <input type="password" id="login-password" placeholder="密碼" />
+          <button class="auth-submit" id="do-login">登入</button>
+        </div>
+        <div id="camp-register-form" style="display:none">
+          <input type="text" id="reg-name" placeholder="姓名" />
+          <input type="email" id="reg-email" placeholder="Email" />
+          <input type="password" id="reg-password" placeholder="密碼（至少 6 字元）" />
+          <button class="auth-submit" id="do-register">註冊</button>
+        </div>
+        <div class="auth-msg" id="auth-msg"></div>
+      </div>
+    </div>
+
+    <script>
+    (function () {
+      const BASE = (() => {
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        const ctx = parts.length > 0 ? '/' + parts[0] : '';
+        return window.location.origin + ctx + '/api';
+      })();
+
+      // ── Patch fetch: auto-attach Bearer token ──
+      const _fetch = window.fetch;
+      window.fetch = function (url, opts) {
+        opts = opts || {};
+        const token = localStorage.getItem('camping_token');
+        if (token && typeof url === 'string' && url.includes('/api/')) {
+          opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, opts.headers || {});
+        }
+        return _fetch(url, opts);
+      };
+
+      // ── UI helpers ──
+      function showModal() { document.getElementById('camp-auth-modal').classList.add('open'); }
+      function hideModal() {
+        document.getElementById('camp-auth-modal').classList.remove('open');
+        document.getElementById('auth-msg').textContent = '';
+        document.getElementById('auth-msg').className = 'auth-msg';
+      }
+      function setMsg(text, isErr) {
+        const el = document.getElementById('auth-msg');
+        el.textContent = text;
+        el.className = 'auth-msg ' + (isErr ? 'err' : 'ok');
+      }
+      function updateUserBar() {
+        const name = localStorage.getItem('camping_user_name');
+        const bar = document.getElementById('camp-user-bar');
+        if (name) {
+          document.getElementById('camp-user-name').textContent = '👤 ' + name;
+          bar.classList.add('show');
+        } else {
+          bar.classList.remove('show');
+        }
+      }
+
+      // ── Tab switching ──
+      document.getElementById('tab-login').onclick = function () {
+        this.classList.add('active');
+        document.getElementById('tab-register').classList.remove('active');
+        document.getElementById('camp-login-form').style.display = '';
+        document.getElementById('camp-register-form').style.display = 'none';
+        document.getElementById('camp-auth-title').textContent = '登入';
+        setMsg('', false);
+      };
+      document.getElementById('tab-register').onclick = function () {
+        this.classList.add('active');
+        document.getElementById('tab-login').classList.remove('active');
+        document.getElementById('camp-register-form').style.display = '';
+        document.getElementById('camp-login-form').style.display = 'none';
+        document.getElementById('camp-auth-title').textContent = '註冊';
+        setMsg('', false);
+      };
+      document.getElementById('camp-auth-close').onclick = hideModal;
+      document.getElementById('camp-auth-modal').onclick = function (e) {
+        if (e.target === this) hideModal();
+      };
+
+      // ── Login ──
+      document.getElementById('do-login').onclick = async function () {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        if (!email || !password) { setMsg('請填寫 Email 與密碼', true); return; }
+        try {
+          const res = await _fetch(BASE + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+          if (!res.ok) { setMsg(data.error || data.detail || '登入失敗', true); return; }
+          localStorage.setItem('camping_token', data.token);
+          localStorage.setItem('camping_user_name', data.name);
+          localStorage.setItem('camping_user_email', data.email);
+          setMsg('登入成功！', false);
+          updateUserBar();
+          setTimeout(hideModal, 800);
+        } catch (e) { setMsg('登入失敗：' + e.message, true); }
+      };
+
+      // ── Register ──
+      document.getElementById('do-register').onclick = async function () {
+        const name = document.getElementById('reg-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        if (!name || !email || !password) { setMsg('請填寫所有欄位', true); return; }
+        try {
+          const res = await _fetch(BASE + '/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+          });
+          const data = await res.json();
+          if (!res.ok) { setMsg(data.error || data.detail || '註冊失敗', true); return; }
+          localStorage.setItem('camping_token', data.token);
+          localStorage.setItem('camping_user_name', data.name);
+          localStorage.setItem('camping_user_email', data.email);
+          setMsg('註冊成功！', false);
+          updateUserBar();
+          setTimeout(hideModal, 800);
+        } catch (e) { setMsg('註冊失敗：' + e.message, true); }
+      };
+
+      // ── Logout ──
+      document.getElementById('camp-logout-btn').onclick = async function () {
+        const token = localStorage.getItem('camping_token');
+        if (token) {
+          await _fetch(BASE + '/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+          }).catch(() => {});
+        }
+        localStorage.removeItem('camping_token');
+        localStorage.removeItem('camping_user_name');
+        localStorage.removeItem('camping_user_email');
+        updateUserBar();
+      };
+
+      // ── Hook Sign in / Sign up buttons rendered by React ──
+      const observer = new MutationObserver(function () {
+        document.querySelectorAll('button').forEach(function (btn) {
+          if (btn.dataset.campHooked) return;
+          const text = btn.textContent.trim();
+          if (text === 'Sign in' || text === 'Sign up') {
+            btn.dataset.campHooked = '1';
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              showModal();
+              if (text === 'Sign up') {
+                document.getElementById('tab-register').click();
+              } else {
+                document.getElementById('tab-login').click();
+              }
+            });
+          }
+          // ── Hook 瀏覽更多 button ──
+          if (text === '瀏覽更多') {
+            btn.dataset.campHooked = '1';
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              openBrowseModal();
+            });
+          }
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // ── 瀏覽更多 Modal ──
+      function openBrowseModal() {
+        var existing = document.getElementById('camp-browse-modal');
+        if (existing) { existing.style.display = 'flex'; return; }
+
+        var modal = document.createElement('div');
+        modal.id = 'camp-browse-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.6);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;';
+
+        var box = document.createElement('div');
+        box.style.cssText = 'background:#fff;border-radius:16px;padding:32px;width:100%;max-width:900px;font-family:Open Sans,sans-serif;position:relative;';
+        box.innerHTML = '<h2 style="margin:0 0 24px;font-size:22px;color:#333;">全部景點</h2>'
+          + '<div id="camp-browse-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;">'
+          + '<p style="color:#888;">載入中...</p></div>';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#666;';
+        closeBtn.onclick = function() { modal.style.display = 'none'; };
+        box.appendChild(closeBtn);
+        modal.appendChild(box);
+        modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+        document.body.appendChild(modal);
+
+        // 打 API 取得景點
+        window.fetch(BASE + '/spot')
+          .then(function(r) { return r.json(); })
+          .then(function(resp) {
+            var spots = resp.data || [];
+            var list = document.getElementById('camp-browse-list');
+            if (!spots.length) { list.innerHTML = '<p>目前沒有景點資料。</p>'; return; }
+            list.innerHTML = spots.map(function(s) {
+              return '<div style="border:1px solid #eee;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);">'
+                + '<img src="' + s.spot_img_url + '" alt="' + s.spot_name + '" style="width:100%;height:160px;object-fit:cover;" onerror="this.style.display=\'none\'">'
+                + '<div style="padding:16px;">'
+                + '<h3 style="margin:0 0 8px;font-size:16px;color:#333;">' + s.spot_name + '</h3>'
+                + '<p style="margin:0 0 12px;font-size:13px;color:#666;line-height:1.5;">' + s.describe + '</p>'
+                + '<span style="background:#ff6b35;color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">$' + s.price + '/每晚</span>'
+                + '</div></div>';
+            }).join('');
+          })
+          .catch(function(err) {
+            document.getElementById('camp-browse-list').innerHTML = '<p style="color:red;">載入失敗：' + err.message + '</p>';
+          });
+      }
+
+      updateUserBar();
+    })();
+    </script>
   </body>
 </html>
