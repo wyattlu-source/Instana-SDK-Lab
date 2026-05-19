@@ -67,6 +67,19 @@ public class OrderPayload {
     @JsonbProperty("coupon_code")
     private String couponCode;
 
+    @JsonProperty("check_in_date")
+    @JsonbProperty("check_in_date")
+    private String checkInDate;
+
+    @JsonProperty("check_out_date")
+    @JsonbProperty("check_out_date")
+    private String checkOutDate;
+
+    public String getCheckInDate() { return checkInDate; }
+    public void setCheckInDate(String checkInDate) { this.checkInDate = checkInDate; }
+    public String getCheckOutDate() { return checkOutDate; }
+    public void setCheckOutDate(String checkOutDate) { this.checkOutDate = checkOutDate; }
+
     public String getEventType() {
         return eventType;
     }

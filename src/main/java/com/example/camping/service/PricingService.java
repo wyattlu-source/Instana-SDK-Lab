@@ -19,33 +19,28 @@ public class PricingService {
     @Inject
     SpotService spotService;
 
+    public int getUnitPrice(String spotId) {
+        if (spotId == null || spotId.isBlank()) return 0;
+        try {
+            int price = spotService.findById(spotId).map(SpotDto::getPrice).orElse(0);
+            if (price == 0) LOGGER.warn("[PRICING] spot not found or price is 0 - spotId: " + spotId);
+            return price;
+        } catch (Exception e) {
+            LOGGER.error("[PRICING] failed to get spot price - spotId: " + spotId, e);
+            return 0;
+        }
+    }
+
     @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.PRICING_SPAN, capturedStackFrames = 5)
     public int calculateTotal(@TagParam("spot_id") String spotId, @TagParam("nights") int nights) {
         InstanaTracing.method(InstanaTracing.PRICING_SPAN, PricingService.class.getName(), "calculateTotal");
+        int unitPrice = getUnitPrice(spotId);
+        int total = unitPrice * Math.max(nights, 1);
         SpanSupport.annotate("tags.pricing.spot_id", spotId == null ? "unknown" : spotId);
         SpanSupport.annotate("tags.pricing.nights", String.valueOf(nights));
-        SpanSupport.annotate("tags.service", "camping-api");
-
-        // 呼叫 spot-service 取得景點價格 → 這會產生跨服務的 span！
-        int unitPrice = 0;
-        if (spotId != null && !spotId.isBlank()) {
-            try {
-                unitPrice = spotService.findById(spotId)
-                        .map(SpotDto::getPrice)
-                        .orElse(0);
-                if (unitPrice == 0) {
-                    LOGGER.warn("[PRICING] spot not found or price is 0 - spotId: " + spotId);
-                }
-            } catch (Exception e) {
-                LOGGER.error("[PRICING] failed to get spot price - spotId: " + spotId + " error: " + e.getMessage(), e);
-                InstanaTracing.error(Span.Type.INTERMEDIATE, InstanaTracing.PRICING_SPAN, e);
-                unitPrice = 0;
-            }
-        }
-
-        int total = unitPrice * Math.max(nights, 1);
         SpanSupport.annotate("tags.pricing.unit_price", String.valueOf(unitPrice));
         SpanSupport.annotate("tags.pricing.total", String.valueOf(total));
+        SpanSupport.annotate("tags.service", "camping-api");
         LOGGER.warn("[PRICING] spotId=" + spotId + " nights=" + nights + " unitPrice=" + unitPrice + " total=" + total);
         return total;
     }

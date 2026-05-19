@@ -56,10 +56,44 @@ public final class InstanaTracing {
     public static final String COUPON_REPO_USE_SPAN = "camping-coupon-repo-useCoupon";
     public static final String COUPON_REPO_EXPIRE_SPAN = "camping-coupon-repo-expireOldCoupons";
 
+    // Thread-local index so multiple log calls in one span get distinct tag keys
+    private static final ThreadLocal<int[]> LOG_IDX = ThreadLocal.withInitial(() -> new int[]{0});
+
     private InstanaTracing() {
     }
 
+    // ── Log helpers: write to SLF4J + annotate current Instana span ──
+
+    public static void logInfo(org.slf4j.Logger logger, String message) {
+        if (logger != null) logger.info(message);
+        annotateLog("INFO", message);
+    }
+
+    public static void logWarn(org.slf4j.Logger logger, String message) {
+        if (logger != null) logger.warn(message);
+        annotateLog("WARN", message);
+    }
+
+    public static void logError(org.slf4j.Logger logger, String message) {
+        if (logger != null) logger.error(message);
+        annotateLog("ERROR", message);
+    }
+
+    public static void logError(org.slf4j.Logger logger, String message, Throwable t) {
+        if (logger != null) logger.error(message, t);
+        annotateLog("ERROR", message);
+        SpanSupport.annotate("log.error.type", t.getClass().getSimpleName());
+        if (t.getMessage() != null) SpanSupport.annotate("log.error.detail", safe(t.getMessage()));
+    }
+
+    private static void annotateLog(String level, String message) {
+        int idx = LOG_IDX.get()[0]++;
+        SpanSupport.annotate("log." + idx + ".level", level);
+        SpanSupport.annotate("log." + idx + ".msg", safe(message));
+    }
+
     public static void httpEntry(String spanName, String method, String path, int statusCode) {
+        LOG_IDX.get()[0] = 0; // reset log index for new span
         annotate(Span.Type.ENTRY, spanName, "tags.http.method", method);
         annotate(Span.Type.ENTRY, spanName, "tags.http.url", "service://camping-api" + path);
         annotate(Span.Type.ENTRY, spanName, "tags.http.status_code", Integer.toString(statusCode));

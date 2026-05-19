@@ -58,6 +58,7 @@ public class AuthService {
         userRepository.save(user);
 
         LOGGER.warn("[AUTH] register success - email: " + payload.getEmail() + " userId: " + user.getUserId());
+        InstanaTracing.logInfo(LOGGER, "[AUTH] user registered - email: " + payload.getEmail() + " userId: " + user.getUserId());
         InstanaTracing.intermediate(InstanaTracing.AUTH_REGISTER_SERVICE_SPAN, "tags.auth.user_id", user.getUserId());
         auditService.record("register", payload.getEmail());
         String token = JwtUtil.generate(appConfig.jwtSecret(), user.getUserId(), user.getEmail(), user.getName());
@@ -85,6 +86,7 @@ public class AuthService {
         }
 
         LOGGER.warn("[AUTH] login success - email: " + payload.getEmail() + " userId: " + user.getUserId());
+        InstanaTracing.logInfo(LOGGER, "[AUTH] user logged in - email: " + payload.getEmail() + " userId: " + user.getUserId());
         InstanaTracing.intermediate(InstanaTracing.AUTH_LOGIN_SERVICE_SPAN, "tags.auth.user_id", user.getUserId());
         auditService.record("login", payload.getEmail());
         String token = JwtUtil.generate(appConfig.jwtSecret(), user.getUserId(), user.getEmail(), user.getName());

@@ -23,7 +23,7 @@ import java.util.Set;
 public class JwtAuthFilter implements ContainerRequestFilter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JwtAuthFilter.class);
-    private static final Set<String> PROTECTED = Set.of("checkout", "favorites", "send_src_email");
+    private static final Set<String> PROTECTED = Set.of("checkout", "favorites", "orders", "coupons", "send_src_email");
 
     @Inject
     AuthService authService;

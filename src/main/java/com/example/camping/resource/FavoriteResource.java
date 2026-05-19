@@ -214,6 +214,38 @@ public class FavoriteResource {
         return "CAMP-" + spotPrefix.toUpperCase() + "-" + timestamp;
     }
 
+    @GET
+    @Path("/history")
+    public Map<String, Object> listFavoriteHistory() {
+        String userId = authenticatedUser.getUserId();
+        if (userId == null || userId.isEmpty()) {
+            LOGGER.error("[FAVORITE] userId not found in request context");
+            throw new jakarta.ws.rs.NotAuthorizedException("未授權的請求");
+        }
+
+        LOGGER.warn("[FAVORITE] history - userId: " + userId);
+        List<com.example.camping.model.Favorite> all = favoriteRepository.findByUserId(userId);
+
+        List<Map<String, Object>> historyList = new ArrayList<>();
+        for (com.example.camping.model.Favorite fav : all) {
+            Map<String, Object> favMap = new HashMap<>();
+            favMap.put("favorite_id", fav.getFavoriteId());
+            favMap.put("spot_id", fav.getSpotId());
+            favMap.put("spot_name", fav.getSpotName());
+            favMap.put("created_at", fav.getCreatedAt());
+            favMap.put("active", fav.isActive());
+            favMap.put("canceled_at", fav.getCanceledAt());
+            historyList.add(favMap);
+        }
+
+        LOGGER.warn("[FAVORITE] history found " + historyList.size() + " records for userId: " + userId);
+        return Map.of(
+                "success", true,
+                "favorites", historyList,
+                "count", historyList.size()
+        );
+    }
+
     private String generateRandomCode(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder code = new StringBuilder(length);
