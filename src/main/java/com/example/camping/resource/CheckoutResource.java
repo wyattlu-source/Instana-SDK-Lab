@@ -12,6 +12,7 @@ import com.example.camping.service.AuditService;
 import com.example.camping.service.KafkaCheckoutService;
 import com.example.camping.service.OrderValidateService;
 import com.example.camping.service.PricingService;
+import com.example.camping.service.ReportingService;
 import com.instana.sdk.annotation.Span;
 import com.instana.sdk.annotation.TagParam;
 import com.instana.sdk.support.ContextSupport;
@@ -51,6 +52,7 @@ public class CheckoutResource {
     @Inject CouponRepository couponRepository;
     @Inject OrderRepository orderRepository;
     @Inject AuthenticatedUser authenticatedUser;
+    @Inject ReportingService reportingService;
 
     @Resource
     ManagedExecutorService executorService;
@@ -62,12 +64,12 @@ public class CheckoutResource {
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.CHECKOUT_HTTP_SPAN,
                 CheckoutResource.class.getName(), "receiveCheckout");
 
-        InstanaTracing.logInfo(LOGGER, "[CHECKOUT] received - event_id: " + order.getEventId() +
+        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] received - event_id: " + order.getEventId() +
                 " order_id: " + order.getOrderId() + " user: " + order.getUserEmail());
 
         // 計算住宿天數
         int nights = calcNights(order.getCheckInDate(), order.getCheckOutDate());
-        InstanaTracing.logInfo(LOGGER, "[CHECKOUT] nights: " + nights +
+        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] nights: " + nights +
                 " check_in: " + order.getCheckInDate() + " check_out: " + order.getCheckOutDate());
 
         // ① 驗證訂單
@@ -107,7 +109,7 @@ public class CheckoutResource {
                 }
                 discountAmount = coupon.getDiscountAmount();
                 finalTotal = Math.max(0, total - discountAmount);
-                InstanaTracing.logInfo(LOGGER, "[CHECKOUT] coupon applied - coupon_code: " + couponCode +
+                InstanaTracing.logWarn(LOGGER, "[CHECKOUT] coupon applied - coupon_code: " + couponCode +
                         " discount: " + discountAmount + " final_total: " + finalTotal);
                 SpanSupport.annotate("tags.checkout.discount_amount", String.valueOf(discountAmount));
                 SpanSupport.annotate("tags.checkout.coupon_applied", "true");
@@ -143,14 +145,23 @@ public class CheckoutResource {
         SpanSupport.annotate("tags.checkout.event_id", order.getEventId());
         SpanSupport.annotate("tags.checkout.order_id", order.getOrderId());
 
-        // ⑥ 非同步送 Kafka
+        // ⑥ 報表與稽核處理（效能瓶頸）
+        try {
+            reportingService.generateOrderSummary(order.getOrderId());
+            reportingService.runAuditMatrix(authenticatedUser.getUserId());
+            reportingService.redundantOrderScan(order.getOrderId());
+        } catch (Exception e) {
+            LOGGER.warn("[CHECKOUT] reporting step failed: {}", e.getMessage());
+        }
+
+        // ⑧ 非同步送 Kafka
         Object snapshotKey = ContextSupport.takeSnapshot();
         executorService.submit(() -> {
             ContextSupport.restoreSnapshot(snapshotKey);
             runCheckoutJob(order);
         });
 
-        InstanaTracing.logInfo(LOGGER, "[CHECKOUT] accepted - event_id: " + order.getEventId() +
+        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] accepted - event_id: " + order.getEventId() +
                 " nights: " + nights + " total: " + total +
                 " discount: " + discountAmount + " final_total: " + finalTotal);
 
@@ -180,10 +191,10 @@ public class CheckoutResource {
     }
 
     private void runCheckoutJob(OrderPayload order) {
-        LOGGER.warn("[CHECKOUT] async job started - event_id: " + order.getEventId());
+        LOGGER.info("[CHECKOUT] async job started - event_id: " + order.getEventId());
         try {
             kafkaCheckoutService.send(order);
-            LOGGER.warn("[CHECKOUT] async job completed - event_id: " + order.getEventId());
+            LOGGER.info("[CHECKOUT] async job completed - event_id: " + order.getEventId());
         } catch (RuntimeException e) {
             LOGGER.error("[CHECKOUT] async job failed - event_id: " + order.getEventId(), e);
             throw e;

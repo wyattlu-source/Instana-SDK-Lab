@@ -64,15 +64,18 @@ public class SpotService {
                     .request(MediaType.APPLICATION_JSON)
                     .headers(traceHeaders())
                     .get(new GenericType<List<SpotDto>>() {});
-            LOGGER.warn("[SPOT] list retrieved from spot-service - count: " + spots.size());
             InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count", String.valueOf(spots.size()));
             InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.source", "spot-service");
             return spots;
         } catch (Exception e) {
-            LOGGER.error("spot-service call failed, using fallback: " + e.getMessage(), e);
+            String errorType = classifySpotError(e);
+            LOGGER.error("spot-service call failed [{}] at {}: {}", errorType, config.spotServiceUrl(), e.getMessage(), e);
             InstanaTracing.error(Span.Type.INTERMEDIATE, InstanaTracing.SPOT_LIST_SPAN, e);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.source", "fallback");
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count", String.valueOf(FALLBACK_SPOTS.size()));
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.source",     "fallback");
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.error_type", errorType);
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.error_hint", spotErrorHint(errorType));
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.target_url", config.spotServiceUrl());
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count",      String.valueOf(FALLBACK_SPOTS.size()));
             return FALLBACK_SPOTS;
         }
     }
@@ -88,17 +91,43 @@ public class SpotService {
                     .request(MediaType.APPLICATION_JSON)
                     .headers(traceHeaders())
                     .get(SpotDto.class);
-            LOGGER.warn("[SPOT] lookup success from spot-service - spotId: " + spotId + " name: " + (spot != null ? spot.getName() : "null"));
             InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.source", "spot-service");
             return Optional.ofNullable(spot);
         } catch (jakarta.ws.rs.NotFoundException e) {
-            LOGGER.warn("[SPOT] not found in spot-service - spotId: " + spotId);
             return Optional.empty();
         } catch (Exception e) {
-            LOGGER.error("spot-service lookup failed for spotId=" + spotId + ": " + e.getMessage(), e);
+            String errorType = classifySpotError(e);
+            LOGGER.error("spot-service lookup failed [{}] spotId={}: {}", errorType, spotId, e.getMessage(), e);
             InstanaTracing.error(Span.Type.INTERMEDIATE, InstanaTracing.SPOT_LOOKUP_SPAN, e);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.source", "fallback");
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.source",     "fallback");
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.error_type", errorType);
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.error_hint", spotErrorHint(errorType));
+            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.target_url", config.spotServiceUrl());
             return FALLBACK_SPOTS.stream().filter(s -> s.getSpotId().equals(spotId)).findFirst();
+        }
+    }
+
+    private String classifySpotError(Exception e) {
+        Throwable t = e;
+        while (t != null) {
+            String cn  = t.getClass().getSimpleName().toLowerCase();
+            String msg = t.getMessage() != null ? t.getMessage().toLowerCase() : "";
+            if (cn.contains("connectexception")       || msg.contains("connection refused")) return "connection_refused";
+            if (cn.contains("sockettimeoutexception") || msg.contains("timed out"))         return "timeout";
+            if (cn.contains("unknownhostexception"))                                         return "unknown_host";
+            if (msg.contains("401") || msg.contains("unauthorized"))                        return "unauthorized";
+            t = t.getCause();
+        }
+        return "unknown";
+    }
+
+    private String spotErrorHint(String type) {
+        switch (type) {
+            case "connection_refused": return "spot-service 服務未啟動（Connection refused），請確認服務是否運行中";
+            case "timeout":           return "spot-service 連線逾時，服務可能過載或未回應";
+            case "unknown_host":      return "無法解析 spot-service 主機名稱，請檢查 SPOT_SERVICE_URL 設定";
+            case "unauthorized":      return "spot-service 認證失敗（HTTP 401），請確認 API Key 或帳號密碼";
+            default:                  return "spot-service 呼叫失敗，請查看伺服器日誌取得詳情";
         }
     }
 

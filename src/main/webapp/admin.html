@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Camping 後台管理</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous"/>
+  <style>
+    :root {
+      --olive:   #5c6b48;
+      --sage:    #8fa67a;
+      --cream:   #f5f0e8;
+      --clay:    #c9714e;
+      --dark:    #2e3320;
+      --white:   #ffffff;
+      --border:  #e0dbd0;
+      --font:    'Noto Sans TC', sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font);background:var(--cream);color:var(--dark);}
+
+    /* ── Login ── */
+    #login-screen{
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(135deg,var(--dark) 0%,var(--olive) 100%);
+    }
+    .login-box{
+      background:var(--white);border-radius:16px;padding:40px 36px;
+      width:360px;box-shadow:0 12px 40px rgba(0,0,0,0.25);
+    }
+    .login-box .logo{text-align:center;font-size:2rem;margin-bottom:6px;}
+    .login-box h2{text-align:center;font-size:1.2rem;color:var(--olive);margin-bottom:24px;}
+    .login-box input{
+      width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;
+      font-size:0.95rem;font-family:var(--font);margin-bottom:14px;outline:none;
+      transition:border-color .2s;
+    }
+    .login-box input:focus{border-color:var(--olive);}
+    .login-box button{
+      width:100%;padding:12px;background:var(--olive);color:#fff;border:none;
+      border-radius:8px;font-size:1rem;font-weight:700;font-family:var(--font);
+      cursor:pointer;transition:opacity .2s;
+    }
+    .login-box button:hover{opacity:.88;}
+    .login-err{color:#c0392b;font-size:.85rem;margin-top:10px;text-align:center;}
+
+    /* ── Dashboard ── */
+    #dashboard{display:none;}
+    .topbar{
+      background:linear-gradient(135deg,var(--dark) 0%,var(--olive) 100%);
+      color:#fff;padding:0 28px;height:52px;display:flex;align-items:center;gap:14px;
+      position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.2);
+    }
+    .topbar .title{font-size:1rem;font-weight:700;flex:1;}
+    .topbar .nav-btn{
+      background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
+      color:#fff;padding:5px 14px;border-radius:20px;cursor:pointer;font-size:.82rem;
+      font-family:var(--font);transition:background .2s;
+    }
+    .topbar .nav-btn:hover,.topbar .nav-btn.active{background:rgba(255,255,255,.28);}
+    .topbar .logout-btn{background:rgba(201,113,78,.3);border-color:rgba(201,113,78,.5);}
+
+    .main{max-width:1300px;margin:0 auto;padding:28px 20px;}
+
+    /* ── Stats ── */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px;}
+    .stat-card{
+      background:var(--white);border-radius:12px;padding:20px 18px;
+      box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid var(--border);
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .stat-card .icon{font-size:1.6rem;}
+    .stat-card .value{font-size:1.8rem;font-weight:900;color:var(--olive);}
+    .stat-card .label{font-size:.78rem;color:#888;font-weight:500;}
+
+    /* ── Section ── */
+    .section{display:none;}
+    .section.active{display:block;}
+    .section-header{
+      display:flex;align-items:center;gap:10px;margin-bottom:18px;
+    }
+    .section-header h2{font-size:1.1rem;font-weight:700;flex:1;}
+    .refresh-btn{
+      background:var(--cream);border:1px solid var(--border);padding:6px 14px;
+      border-radius:8px;cursor:pointer;font-size:.82rem;font-family:var(--font);
+      color:var(--olive);font-weight:600;transition:background .2s;
+    }
+    .refresh-btn:hover{background:#ece7df;}
+
+    /* ── Table ── */
+    .tbl-wrap{overflow-x:auto;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    table{width:100%;border-collapse:collapse;background:var(--white);font-size:.83rem;}
+    thead tr{background:linear-gradient(135deg,var(--olive) 0%,var(--sage) 100%);color:#fff;}
+    thead th{padding:11px 14px;text-align:left;font-weight:700;white-space:nowrap;}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .15s;}
+    tbody tr:hover{background:#faf7f2;}
+    tbody td{padding:10px 14px;vertical-align:top;}
+    .mono{font-family:monospace;font-size:.8rem;color:#555;}
+    .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.74rem;font-weight:700;}
+    .b-green{background:#d4edda;color:#155724;}
+    .b-gray {background:#e9ecef;color:#495057;}
+    .b-red  {background:#f8d7da;color:#721c24;}
+    .b-orange{background:#fff3cd;color:#856404;}
+    .b-blue {background:#cce5ff;color:#004085;}
+
+    /* ── Data Flow ── */
+    .flow-wrap{background:var(--white);border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow-x:auto;}
+    .flow{display:flex;align-items:center;gap:0;min-width:900px;}
+    .flow-node{
+      background:linear-gradient(135deg,var(--olive),var(--sage));
+      color:#fff;border-radius:10px;padding:12px 16px;text-align:center;
+      font-size:.78rem;font-weight:700;min-width:110px;
+      box-shadow:0 3px 10px rgba(0,0,0,.15);
+    }
+    .flow-node.kafka{background:linear-gradient(135deg,#1565c0,#1976d2);}
+    .flow-node.mongo{background:linear-gradient(135deg,#2e7d32,#388e3c);}
+    .flow-node.consumer{background:linear-gradient(135deg,#6a1b9a,#7b1fa2);}
+    .flow-node.downstream{background:linear-gradient(135deg,#e65100,#ef6c00);min-width:90px;}
+    .flow-arrow{font-size:1.3rem;color:var(--sage);padding:0 6px;}
+    .flow-group{display:flex;flex-direction:column;gap:6px;}
+    .flow-desc{font-size:.72rem;color:#999;margin-top:6px;text-align:center;}
+
+    .flow-steps{margin-top:28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+    .flow-step{
+      background:var(--cream);border:1px solid var(--border);border-radius:10px;
+      padding:14px 16px;font-size:.82rem;
+    }
+    .flow-step .step-title{font-weight:700;color:var(--olive);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+    .flow-step .step-desc{color:#666;line-height:1.6;font-size:.78rem;}
+
+    /* ── Instana Status ── */
+    .instana-svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px;}
+    .instana-svc-card{background:var(--white);border-radius:12px;padding:16px 18px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+    .instana-svc-name{font-weight:700;font-size:.88rem;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+    .instana-svc-row{display:flex;justify-content:space-between;font-size:.78rem;padding:3px 0;border-bottom:1px dashed #f0ece4;}
+    .instana-svc-row:last-child{border:none;}
+    .instana-svc-row .k{color:#999;}
+    .instana-svc-row .v{font-weight:700;}
+    .v-ok{color:#155724;}.v-warn{color:#856404;}.v-err{color:#c0392b;}
+    .instana-events-list{display:flex;flex-direction:column;gap:10px;}
+    .instana-event{background:var(--white);border-radius:10px;padding:14px 16px;border-left:4px solid #ccc;font-size:.82rem;box-shadow:0 1px 6px rgba(0,0,0,.05);}
+    .instana-event.open{border-left-color:#e74c3c;}
+    .instana-event.closed{border-left-color:#95a5a6;opacity:.7;}
+    .instana-event.change{border-left-color:#3498db;}
+    .instana-event .ev-title{font-weight:700;color:#222;margin-bottom:4px;}
+    .instana-event .ev-meta{color:#999;font-size:.76rem;}
+    .instana-refresh-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;font-size:.82rem;color:#999;}
+    .instana-refresh-bar strong{color:var(--olive);}
+
+    /* ── Data Flow Updated ── */
+    .flow-real{border:2px solid #2e7d32;position:relative;}
+    .flow-real::after{content:'✅ 真實';position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.55rem;background:#2e7d32;color:#fff;padding:1px 5px;border-radius:3px;white-space:nowrap;}
+    .flow-sim{border:2px solid #e65100;position:relative;}
+    .flow-sim::after{content:'⚠️ 模擬';position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:.55rem;background:#e65100;color:#fff;padding:1px 5px;border-radius:3px;white-space:nowrap;}
+    .flow-legend{display:flex;gap:16px;margin-top:18px;font-size:.78rem;}
+    .flow-legend span{display:flex;align-items:center;gap:5px;}
+    .leg-real{width:12px;height:12px;border-radius:2px;background:#2e7d32;}
+    .leg-sim{width:12px;height:12px;border-radius:2px;background:#e65100;}
+    .flow-kafka-topics{margin-top:24px;background:#e8f4fd;border-radius:10px;padding:16px 18px;border:1px solid #90caf9;}
+    .flow-kafka-topics h4{font-size:.88rem;font-weight:700;color:#1565c0;margin-bottom:12px;}
+    .kafka-topic-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.8rem;}
+    .topic-name{font-family:monospace;background:#1565c0;color:#fff;padding:2px 8px;border-radius:4px;font-size:.75rem;}
+    .topic-desc{color:#555;}
+    .topic-status{margin-left:auto;font-weight:700;}
+
+    /* ── Demo Buttons ── */
+    .demo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+    .demo-card{
+      background:var(--white);border-radius:12px;padding:20px;
+      border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.06);
+    }
+    .demo-card h4{font-size:.9rem;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+    .demo-card p{font-size:.8rem;color:#777;margin-bottom:14px;line-height:1.6;}
+    .demo-btn{
+      padding:8px 18px;border:none;border-radius:8px;cursor:pointer;
+      font-size:.83rem;font-family:var(--font);font-weight:700;transition:opacity .2s;
+    }
+    .demo-btn:hover{opacity:.85;}
+    .demo-btn.red{background:#e74c3c;color:#fff;}
+    .demo-btn.orange{background:var(--clay);color:#fff;}
+    .demo-result{margin-top:10px;font-size:.78rem;padding:8px 10px;border-radius:6px;display:none;}
+    .demo-result.err{background:#fff5f5;border:1px solid #ffc0c0;color:#c0392b;}
+    .demo-result.ok{background:#f0fff4;border:1px solid #b2dfdb;color:#1b5e20;}
+
+    /* ── Processing detail ── */
+    .ps-row{margin-top:6px;}
+    .ps-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+    .ps-chip{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700;
+      background:#d4edda;color:#155724;
+    }
+    .ps-chip.pending{background:#fff3cd;color:#856404;}
+
+    /* ── Expandable detail row ── */
+    tbody tr.data-row{cursor:pointer;}
+    tbody tr.data-row:hover td{background:#f0ece4;}
+    tbody tr.data-row td:first-child::before{
+      content:'▶ ';font-size:.7rem;color:#aaa;margin-right:4px;transition:transform .2s;display:inline-block;
+    }
+    tbody tr.data-row.expanded td:first-child::before{content:'▼ ';}
+    tr.detail-row{display:none;}
+    tr.detail-row.open{display:table-row;}
+    tr.detail-row td{padding:0 !important;border-bottom:2px solid var(--olive);}
+    .detail-box{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+      background:#f8f6f0;
+    }
+    .detail-service{
+      padding:14px 16px;border-right:1px solid var(--border);
+    }
+    .detail-service:last-child{border-right:none;}
+    .detail-service-title{
+      font-weight:700;font-size:.8rem;color:var(--olive);
+      margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:6px;
+    }
+    .detail-kv{display:flex;flex-direction:column;gap:5px;}
+    .detail-kv-row{display:flex;flex-direction:column;font-size:.76rem;}
+    .detail-kv-row .k{color:#999;font-size:.7rem;margin-bottom:1px;}
+    .detail-kv-row .v{color:#333;font-weight:500;word-break:break-all;}
+    .detail-kv-row .v.ok{color:#155724;font-weight:700;}
+    .detail-kv-row .v.pending{color:#856404;}
+
+    .spinner{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid #ccc;border-top-color:var(--olive);animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-row td{text-align:center;padding:24px;color:#aaa;}
+  </style>
+</head>
+<body>
+
+<!-- ══ Login ══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">🏕️</div>
+    <h2>Camping 工程師後台</h2>
+    <input type="password" id="admin-key-input" placeholder="輸入 Admin Key" autocomplete="off"/>
+    <button onclick="doAdminLogin()">進入後台</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ Dashboard ══ -->
+<div id="dashboard">
+  <div class="topbar">
+    <i class="fa-solid fa-tent-arrow-left-right"></i>
+    <span class="title">Camping 工程師後台</span>
+    <button class="nav-btn active" id="nav-overview"  onclick="showSection('overview')">📊 總覽</button>
+    <button class="nav-btn"        id="nav-orders"    onclick="showSection('orders')">📋 訂單</button>
+    <button class="nav-btn"        id="nav-coupons"   onclick="showSection('coupons')">🎫 優惠券</button>
+    <button class="nav-btn"        id="nav-processing" onclick="showSection('processing')">⚙️ 下游處理</button>
+    <button class="nav-btn"        id="nav-flow"      onclick="showSection('flow')">🔀 資料流</button>
+    <button class="nav-btn"        id="nav-instana"   onclick="showSection('instana')">📡 Instana 狀態</button>
+    <button class="nav-btn"        id="nav-demo"      onclick="showSection('demo')">🧪 Demo 錯誤</button>
+    <button class="nav-btn logout-btn" onclick="doLogout()">登出</button>
+  </div>
+
+  <div class="main">
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="icon">📋</div><div class="value" id="s-orders">—</div><div class="label">總訂單數</div></div>
+      <div class="stat-card"><div class="icon">💰</div><div class="value" id="s-revenue">—</div><div class="label">總營收 (TWD)</div></div>
+      <div class="stat-card"><div class="icon">🎫</div><div class="value" id="s-coupons">—</div><div class="label">優惠券總數</div></div>
+      <div class="stat-card"><div class="icon">✅</div><div class="value" id="s-used">—</div><div class="label">已使用優惠券</div></div>
+      <div class="stat-card"><div class="icon">⚙️</div><div class="value" id="s-processed">—</div><div class="label">下游已處理</div></div>
+    </div>
+
+    <!-- 總覽 -->
+    <div class="section active" id="section-overview">
+      <div class="section-header">
+        <h2>📊 系統總覽</h2>
+        <button class="refresh-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+      </div>
+      <p style="color:#888;font-size:.88rem;margin-bottom:18px">點選上方導覽列查看各項詳細數據。</p>
+    </div>
+
+    <!-- 訂單 -->
+    <div class="section" id="section-orders">
+      <div class="section-header">
+        <h2>📋 所有訂單</h2>
+        <button class="refresh-btn" onclick="loadOrders()"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="orders-table">
+          <thead><tr>
+            <th>訂單 ID</th><th>用戶 Email</th><th>景點</th>
+            <th>入住</th><th>退房</th><th>晚數</th>
+            <th>金額</th><th>折扣</th><th>應付</th>
+            <th>優惠券</th><th>狀態</th><th>建立時間</th>
+          </tr></thead>
+          <tbody id="orders-tbody"><tr class="loading-row"><td colspan="12"><div class="spinner"></div> 載入中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 優惠券 -->
+    <div class="section" id="section-coupons">
+      <div class="section-header">
+        <h2>🎫 所有優惠券</h2>
+        <button class="refresh-btn" onclick="loadCoupons()"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="coupons-table">
+          <thead><tr>
+            <th>優惠券代碼</th><th>景點</th><th>折扣金額</th>
+            <th>狀態</th><th>有效期限</th><th>發放時間</th><th>使用訂單</th>
+          </tr></thead>
+          <tbody id="coupons-tbody"><tr class="loading-row"><td colspan="7"><div class="spinner"></div> 載入中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 下游處理 -->
+    <div class="section" id="section-processing">
+      <div class="section-header">
+        <h2>⚙️ 下游處理記錄</h2>
+        <button class="refresh-btn" onclick="loadProcessing()"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>訂單 ID</th><th>用戶 Email</th><th>處理時間</th>
+            <th>📧 通知</th><th>🏕️ 庫存</th><th>🧾 帳務</th><th>📊 分析</th>
+          </tr></thead>
+          <tbody id="processing-tbody"><tr class="loading-row"><td colspan="7"><div class="spinner"></div> 載入中...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 資料流 -->
+    <div class="section" id="section-flow">
+      <div class="section-header"><h2>🔀 系統資料流架構（真實狀況）</h2></div>
+      <div class="flow-wrap">
+
+        <!-- Legend -->
+        <div class="flow-legend" style="margin-bottom:20px">
+          <span><div class="leg-real"></div> ✅ 真實執行（已驗證）</span>
+          <span><div class="leg-sim"></div> ⚠️ 模擬 / 尚未實作（LOG 輸出）</span>
+          <span style="color:#1565c0;font-weight:700">🔵 Instana 已追蹤到</span>
+        </div>
+
+        <!-- Main flow -->
+        <div class="flow" style="margin-bottom:8px">
+          <div class="flow-node flow-real" style="position:relative"><i class="fa-solid fa-user"></i><br>前端用戶<br><small style="opacity:.8">瀏覽器</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-real" style="position:relative"><i class="fa-brands fa-java"></i><br>camping-api<br><small style="opacity:.8">JBoss EAP 8<br>:8080</small></div>
+          <div class="flow-arrow">⇅</div>
+          <div class="flow-node flow-real mongo" style="position:relative"><i class="fa-solid fa-database"></i><br>MongoDB Atlas<br><small style="opacity:.8">orders / users<br>coupons</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-real kafka" style="position:relative"><i class="fa-solid fa-paper-plane"></i><br>Kafka<br><small style="opacity:.8">raw_events<br>~850ms sync</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-real" style="position:relative;background:linear-gradient(135deg,#1a237e,#283593)"><i class="fa-solid fa-stream"></i><br>ksqlDB<br><small style="opacity:.8">stream<br>processing</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-group">
+            <div class="flow-node flow-real kafka" style="position:relative;font-size:.7rem;min-width:120px">📨 orders_processed</div>
+            <div class="flow-node flow-real kafka" style="position:relative;font-size:.7rem;min-width:120px">💰 live_paid_orders</div>
+            <div class="flow-node flow-real kafka" style="position:relative;font-size:.7rem;min-width:120px">📈 revenue_hourly</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-real mongo" style="position:relative"><i class="fa-solid fa-database"></i><br>MongoDB<br><small style="opacity:.8">processing_logs</small></div>
+        </div>
+
+        <!-- spot-service branch -->
+        <div style="display:flex;align-items:center;gap:8px;margin:10px 0 10px 170px;font-size:.78rem;color:#666">
+          <span style="color:#aaa">camping-api</span>
+          <span>⇅ HTTP</span>
+          <div class="flow-node flow-real" style="position:relative;padding:8px 14px;font-size:.72rem;min-width:0"><i class="fa-solid fa-map-location-dot"></i> spot-service<br><small style="opacity:.8">JBoss :8180</small></div>
+          <span style="color:#888">（景點查詢、單價）</span>
+        </div>
+
+        <!-- order-processor branch (simulated) -->
+        <div style="display:flex;align-items:center;gap:8px;margin:4px 0 16px;font-size:.78rem">
+          <div class="flow-node flow-real kafka" style="position:relative;padding:8px 14px;font-size:.72rem;min-width:0">raw_events</div>
+          <span>→</span>
+          <div class="flow-node flow-sim consumer" style="position:relative;padding:8px 14px;font-size:.72rem;min-width:0"><i class="fa-solid fa-gears"></i> order-processor<br><small style="opacity:.8">Java consumer</small></div>
+          <span>→</span>
+          <div class="flow-group" style="gap:4px">
+            <div class="flow-node flow-sim downstream" style="position:relative;font-size:.65rem;padding:5px 10px;min-width:0">📧 通知（LOG 只）</div>
+            <div class="flow-node flow-sim downstream" style="position:relative;font-size:.65rem;padding:5px 10px;min-width:0">🏕️ 庫存（LOG 只）</div>
+          </div>
+          <span style="color:#e65100;font-size:.75rem;margin-left:6px">order-processor 目前只輸出 LOG<br>尚未實作實際 Kafka/HTTP 呼叫</span>
+        </div>
+
+        <!-- Kafka topics detail -->
+        <div class="flow-kafka-topics">
+          <h4><i class="fa-brands fa-octopus-deploy"></i> Kafka Topics 詳情（由 Instana 確認）</h4>
+          <div class="kafka-topic-row">
+            <span class="topic-name">raw_events</span>
+            <span class="topic-desc">camping-api 下訂後 Avro 序列化 → Kafka，含 Instana trace header，Schema Registry 驗證</span>
+            <span class="topic-status" style="color:#2e7d32">✅ 真實寫入 ~850ms</span>
+          </div>
+          <div class="kafka-topic-row">
+            <span class="topic-name">orders_processed</span>
+            <span class="topic-desc">ksqlDB 從 raw_events 篩選 ORDER_CREATED 事件後輸出</span>
+            <span class="topic-status" style="color:#2e7d32">✅ ksqlDB 真實處理</span>
+          </div>
+          <div class="kafka-topic-row">
+            <span class="topic-name">live_paid_orders</span>
+            <span class="topic-desc">ksqlDB stream：即時付費訂單流，過濾 is_real=true</span>
+            <span class="topic-status" style="color:#2e7d32">✅ ksqlDB 真實處理</span>
+          </div>
+          <div class="kafka-topic-row">
+            <span class="topic-name">live_paid_orders_real</span>
+            <span class="topic-desc">live_paid_orders 的 real 過濾子集</span>
+            <span class="topic-status" style="color:#2e7d32">✅ ksqlDB</span>
+          </div>
+          <div class="kafka-topic-row">
+            <span class="topic-name">revenue_hourly</span>
+            <span class="topic-desc">ksqlDB 聚合：每小時營收統計（CTAS）</span>
+            <span class="topic-status" style="color:#2e7d32">✅ ksqlDB</span>
+          </div>
+        </div>
+
+        <!-- Step-by-step with honest labels -->
+        <div class="flow-steps" style="margin-top:22px">
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ① 前端送出訂單</div>
+            <div class="step-desc">POST /api/checkout 帶 JWT Token → camping-api 驗證 JWT → 解析 userId/email</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ② 定價 + 優惠券</div>
+            <div class="step-desc">HTTP 呼叫 spot-service 取單價 → 驗證優惠券有效性 → MongoDB 原子更新 coupon.status=USED</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ③ 訂單寫入 MongoDB</div>
+            <div class="step-desc">orders 集合新增一筆，status=confirmed，含 userId/email/spotId/nights/finalTotal/couponCode</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ④ Kafka 非同步 produce</div>
+            <div class="step-desc">非同步執行 kafkaCheckoutService.send()，Avro 序列化，注入 X-Instana-T/S trace header，同步 .get() 等待確認 (~850ms)</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ⑤ ksqlDB 串流處理</div>
+            <div class="step-desc">raw_events → orders_processed → live_paid_orders → revenue_hourly，全部由 ksqlDB 自動消費處理，Instana 可見</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #e65100">
+            <div class="step-title">⚠️ ⑥ order-processor（模擬）</div>
+            <div class="step-desc">Java consumer 讀取 raw_events，驗證欄位後輸出 LOG。<br>⚠️ 實際發送 orders_processed / 更新庫存 / 寄信通知均為 TODO，目前只寫 LOG，<b>沒有真實 email 寄出</b></div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #1565c0">
+            <div class="step-title">🔵 ⑦ processing_logs</div>
+            <div class="step-desc">MongoDB processing_logs 集合有資料（通知/庫存/帳務/分析），推測由 Kafka Connect MongoDB Sink Connector 或其他消費者寫入，來源待確認</div>
+          </div>
+          <div class="flow-step" style="border-left:3px solid #2e7d32">
+            <div class="step-title">✅ ⑧ Instana 全鏈路追蹤</div>
+            <div class="step-desc">Span waterfall：HTTP Entry → MongoDB Exit → Kafka Exit → Consumer Entry → ksqlDB；WARN log 三角形標記在 Instana UI 可見</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instana 即時狀態 -->
+    <div class="section" id="section-instana">
+      <div class="section-header">
+        <h2>📡 Instana 即時狀態（過去 1 小時）</h2>
+        <button class="refresh-btn" onclick="loadInstana()"><i class="fa-solid fa-rotate-right"></i> 重新整理</button>
+      </div>
+      <div class="instana-refresh-bar">
+        <span>資料來源：<strong>Instana API</strong></span>
+        <span id="instana-fetched-at">—</span>
+        <span style="margin-left:auto;color:#aaa;font-size:.75rem">每 60 秒自動更新</span>
+      </div>
+
+      <!-- Service Health -->
+      <h3 style="font-size:.9rem;font-weight:700;color:var(--olive);margin-bottom:12px">🟢 服務健康狀態</h3>
+      <div class="instana-svc-grid" id="instana-svc-grid">
+        <div style="color:#aaa;font-size:.88rem;padding:16px"><div class="spinner"></div> 載入中...</div>
+      </div>
+
+      <!-- Active Events -->
+      <h3 style="font-size:.9rem;font-weight:700;color:var(--clay);margin-bottom:12px;margin-top:8px">🚨 目前開啟的事件 / 告警</h3>
+      <div class="instana-events-list" id="instana-events-list">
+        <div style="color:#aaa;font-size:.88rem;padding:16px"><div class="spinner"></div> 載入中...</div>
+      </div>
+    </div>
+
+    <!-- Demo 錯誤 -->
+    <div class="section" id="section-demo">
+      <div class="section-header"><h2>🧪 Demo 錯誤場景（用於 Instana 展示）</h2></div>
+      <div class="demo-grid">
+        <div class="demo-card">
+          <h4><span style="font-size:1.2rem">🔌</span> spot-service 服務未啟動</h4>
+          <p>模擬 spot-service 連線到不存在的 port 9999，產生 Connection refused 錯誤，在 Instana 中可見紅色 error span。</p>
+          <button class="demo-btn red" onclick="runDemo('spot-error/service-down', this)">觸發 spot-service 錯誤</button>
+          <div class="demo-result" id="demo-r-spot-down"></div>
+        </div>
+        <div class="demo-card">
+          <h4><span style="font-size:1.2rem">🔑</span> MongoDB 帳號密碼錯誤</h4>
+          <p>模擬使用錯誤的 MongoDB 帳號密碼連線，產生 Authentication Failed 錯誤，可在 Instana 觀察 DB 錯誤 span。</p>
+          <button class="demo-btn orange" onclick="runDemo('mongo-error/auth-failure', this)">觸發 Mongo Auth 錯誤</button>
+          <div class="demo-result" id="demo-r-mongo-auth"></div>
+        </div>
+        <div class="demo-card">
+          <h4><span style="font-size:1.2rem">🛑</span> MongoDB 服務未啟動</h4>
+          <p>模擬 MongoDB 服務不可達（port 27099），產生 Connection refused 或 Timeout 錯誤，可在 Instana 觀察 DB 連線失敗 span。</p>
+          <button class="demo-btn red" onclick="runDemo('mongo-error/service-down', this)">觸發 Mongo 服務中斷</button>
+          <div class="demo-result" id="demo-r-mongo-down"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_KEY = '';
+let _adminKey = '';
+const BASE = (() => {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const ctx = parts.length > 0 ? '/' + parts[0] : '';
+  return window.location.origin + ctx + '/api';
+})();
+
+function adminFetch(path) {
+  return fetch(BASE + '/' + path, { headers: { 'X-Admin-Key': _adminKey } });
+}
+
+function doAdminLogin() {
+  const key = document.getElementById('admin-key-input').value.trim();
+  if (!key) return;
+  _adminKey = key;
+  adminFetch('admin/stats').then(r => {
+    if (r.status === 401) {
+      document.getElementById('login-err').textContent = 'Admin Key 錯誤';
+      return;
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadAll();
+  }).catch(e => {
+    document.getElementById('login-err').textContent = '連線失敗：' + e.message;
+  });
+}
+document.getElementById('admin-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+
+function doLogout() {
+  _adminKey = '';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('admin-key-input').value = '';
+}
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'orders')     loadOrders();
+  if (name === 'coupons')    loadCoupons();
+  if (name === 'processing') loadProcessing();
+  if (name === 'instana')    loadInstana();
+}
+
+function loadAll() {
+  adminFetch('admin/stats').then(r => r.json()).then(data => {
+    if (!data.success) return;
+    const s = data.stats;
+    document.getElementById('s-orders').textContent    = s.total_orders;
+    document.getElementById('s-revenue').textContent   = '$' + s.total_revenue.toLocaleString();
+    document.getElementById('s-coupons').textContent   = s.total_coupons;
+    document.getElementById('s-used').textContent      = s.used_coupons;
+    document.getElementById('s-processed').textContent = s.processed_orders;
+  }).catch(() => {});
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('zh-TW');
+}
+function fmtDateTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString('zh-TW');
+}
+function shortId(id) {
+  return id ? id.substring(0,8) + '…' : '—';
+}
+
+function loadOrders() {
+  document.getElementById('orders-tbody').innerHTML = '<tr class="loading-row"><td colspan="12"><div class="spinner"></div> 載入中...</td></tr>';
+  adminFetch('admin/orders').then(r => r.json()).then(data => {
+    if (!data.success || !data.orders.length) {
+      document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px;color:#aaa">無訂單資料</td></tr>';
+      return;
+    }
+    document.getElementById('orders-tbody').innerHTML = data.orders.map(o => {
+      const coupon = o.coupon_code ? '<span class="badge b-orange">' + o.coupon_code + '</span>' : '—';
+      return '<tr>'
+        + '<td class="mono" title="' + o.order_id + '">' + shortId(o.order_id) + '</td>'
+        + '<td>' + (o.user_email || '—') + '</td>'
+        + '<td>' + (o.spot_name || o.spot_id || '—') + '</td>'
+        + '<td>' + (o.check_in_date || '—') + '</td>'
+        + '<td>' + (o.check_out_date || '—') + '</td>'
+        + '<td style="text-align:center">' + (o.nights || 1) + '</td>'
+        + '<td>$' + (o.total || 0) + '</td>'
+        + '<td style="color:#e74c3c">' + (o.discount_amount > 0 ? '-$' + o.discount_amount : '—') + '</td>'
+        + '<td style="font-weight:700;color:#2e7d32">$' + (o.final_total || 0) + '</td>'
+        + '<td>' + coupon + '</td>'
+        + '<td><span class="badge b-green">' + (o.status || 'confirmed') + '</span></td>'
+        + '<td class="mono">' + fmtDate(o.created_at) + '</td>'
+        + '</tr>';
+    }).join('');
+  }).catch(e => {
+    document.getElementById('orders-tbody').innerHTML = '<tr><td colspan="12" style="color:#c0392b;padding:16px">載入失敗：' + e.message + '</td></tr>';
+  });
+}
+
+function loadCoupons() {
+  document.getElementById('coupons-tbody').innerHTML = '<tr class="loading-row"><td colspan="7"><div class="spinner"></div> 載入中...</td></tr>';
+  adminFetch('admin/coupons').then(r => r.json()).then(data => {
+    if (!data.success || !data.coupons.length) {
+      document.getElementById('coupons-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa">無優惠券資料</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    document.getElementById('coupons-tbody').innerHTML = data.coupons.map(c => {
+      const isUsed = c.status === 'USED';
+      const isExpired = c.expires_at && c.expires_at < now && !isUsed;
+      const badge = isUsed ? '<span class="badge b-gray">已使用</span>'
+        : isExpired ? '<span class="badge b-red">已過期</span>'
+        : '<span class="badge b-green">可使用</span>';
+      return '<tr>'
+        + '<td class="mono" style="font-weight:700;letter-spacing:1px">' + c.coupon_code + '</td>'
+        + '<td>' + (c.spot_name || '—') + '</td>'
+        + '<td style="font-weight:700;color:#e74c3c">-$' + c.discount_amount + '</td>'
+        + '<td>' + badge + '</td>'
+        + '<td>' + fmtDate(c.expires_at) + '</td>'
+        + '<td>' + fmtDate(c.created_at) + '</td>'
+        + '<td class="mono">' + (c.order_id ? shortId(c.order_id) : '—') + '</td>'
+        + '</tr>';
+    }).join('');
+  }).catch(e => {
+    document.getElementById('coupons-tbody').innerHTML = '<tr><td colspan="7" style="color:#c0392b;padding:16px">載入失敗：' + e.message + '</td></tr>';
+  });
+}
+
+function loadProcessing() {
+  document.getElementById('processing-tbody').innerHTML = '<tr class="loading-row"><td colspan="7"><div class="spinner"></div> 載入中...</td></tr>';
+  adminFetch('admin/processing').then(r => r.json()).then(data => {
+    if (!data.success || !data.processing.length) {
+      document.getElementById('processing-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#aaa">無處理記錄</td></tr>';
+      return;
+    }
+    function chip(step) {
+      if (!step) return '<span class="badge b-gray">—</span>';
+      return step.status === 'completed'
+        ? '<span class="badge b-green">✓ 完成</span>'
+        : '<span class="badge b-orange">⏳ 處理中</span>';
+    }
+    function kv(k, v, cls) {
+      if (!v && v !== 0) return '';
+      return '<div class="detail-kv-row"><span class="k">' + k + '</span><span class="v' + (cls?' '+cls:'') + '">' + v + '</span></div>';
+    }
+    function serviceBox(icon, title, s) {
+      if (!s) return '<div class="detail-service"><div class="detail-service-title">' + icon + ' ' + title + '</div><div style="color:#aaa;font-size:.78rem">無資料</div></div>';
+      const ok = s.status === 'completed';
+      const statusCls = ok ? 'ok' : 'pending';
+      const statusTxt = ok ? '✓ 完成' : '⏳ 處理中';
+      let kvs = kv('狀態', statusTxt, statusCls);
+      if (s.email)             kvs += kv('Email', s.email);
+      if (s.template)          kvs += kv('範本', s.template);
+      if (s.channel)           kvs += kv('頻道', s.channel);
+      if (s.spot_id)           kvs += kv('景點 ID', s.spot_id.substring(0,8)+'…');
+      if (s.action)            kvs += kv('動作', s.action);
+      if (s.receipt_id)        kvs += kv('收據', s.receipt_id.substring(0,16)+'…');
+      if (s.amount !== undefined) kvs += kv('金額', '$'+s.amount);
+      if (s.currency)          kvs += kv('幣別', s.currency);
+      if (s.tier)              kvs += kv('等級', s.tier);
+      if (s.nights !== undefined) kvs += kv('住宿天數', s.nights+' 晚');
+      if (s.revenue_per_night !== undefined) kvs += kv('每晚營收', '$'+s.revenue_per_night);
+      return '<div class="detail-service"><div class="detail-service-title">' + icon + ' ' + title + '</div><div class="detail-kv">' + kvs + '</div></div>';
+    }
+
+    let html = '';
+    data.processing.forEach((p, i) => {
+      const rowId = 'pr-' + i;
+      html += '<tr class="data-row" onclick="toggleDetail(\'' + rowId + '\', this)">'
+        + '<td class="mono" title="' + p.order_id + '">' + shortId(p.order_id) + '</td>'
+        + '<td>' + (p.user_email || '—') + '</td>'
+        + '<td class="mono">' + fmtDateTime(p.processed_at) + '</td>'
+        + '<td>' + chip(p.notification) + '</td>'
+        + '<td>' + chip(p.inventory) + '</td>'
+        + '<td>' + chip(p.billing) + '</td>'
+        + '<td>' + chip(p.analytics) + '</td>'
+        + '</tr>';
+      html += '<tr class="detail-row" id="' + rowId + '">'
+        + '<td colspan="7">'
+        + '<div class="detail-box">'
+        + serviceBox('📧', '通知 Notification', p.notification)
+        + serviceBox('🏕️', '庫存 Inventory', p.inventory)
+        + serviceBox('🧾', '帳務 Billing', p.billing)
+        + serviceBox('📊', '分析 Analytics', p.analytics)
+        + '</div></td></tr>';
+    });
+    document.getElementById('processing-tbody').innerHTML = html;
+  }).catch(e => {
+    document.getElementById('processing-tbody').innerHTML = '<tr><td colspan="7" style="color:#c0392b;padding:16px">載入失敗：' + e.message + '</td></tr>';
+  });
+}
+
+function toggleDetail(rowId, dataRow) {
+  const detailRow = document.getElementById(rowId);
+  const isOpen = detailRow.classList.contains('open');
+  // close all others
+  document.querySelectorAll('.detail-row.open').forEach(r => r.classList.remove('open'));
+  document.querySelectorAll('.data-row.expanded').forEach(r => r.classList.remove('expanded'));
+  if (!isOpen) {
+    detailRow.classList.add('open');
+    dataRow.classList.add('expanded');
+  }
+}
+
+// ── Instana Status ──
+const CAMPING_SERVICES = ['camping-api','camping','spot-service','raw_events','orders_processed','live_paid_orders','live_paid_orders_real'];
+let _instanaTimer = null;
+
+async function loadInstana() {
+  document.getElementById('instana-svc-grid').innerHTML = '<div style="color:#aaa;font-size:.88rem;padding:16px"><div class="spinner"></div> 向 Instana API 查詢中...</div>';
+  document.getElementById('instana-events-list').innerHTML = '<div style="color:#aaa;font-size:.88rem;padding:16px"><div class="spinner"></div></div>';
+  try {
+    const r = await adminFetch('admin/instana-status');
+    const raw = await r.json();
+    if (raw.error) { throw new Error(raw.error); }
+
+    document.getElementById('instana-fetched-at').textContent = '更新時間：' + new Date(raw.fetched_at).toLocaleString('zh-TW');
+
+    // ── Service metrics ──
+    const metrics = raw.metrics_raw && raw.metrics_raw.items ? raw.metrics_raw.items : [];
+    const svcMap = {};
+    metrics.forEach(function(item) {
+      if (!item.name) return;
+      const calls = item.metrics_extracted && item.metrics_extracted['calls.sum'] ? item.metrics_extracted['calls.sum'].value : 0;
+      const errs  = item.metrics_extracted && item.metrics_extracted['erroneousCalls.sum'] ? item.metrics_extracted['erroneousCalls.sum'].value : 0;
+      const lat   = item.metrics_extracted && item.metrics_extracted['latency.mean'] ? item.metrics_extracted['latency.mean'].value : 0;
+      svcMap[item.name] = { calls: calls, errs: errs, lat: lat };
+    });
+
+    const targetSvcs = [
+      { key:'camping-api',          label:'camping-api',          icon:'🏕️', desc:'JBoss EAP 8 主服務' },
+      { key:'camping',              label:'camping (consumer)',    icon:'⚙️', desc:'Consumer 消費端' },
+      { key:'spot-service',         label:'spot-service',         icon:'🗺️', desc:'景點查詢服務' },
+      { key:'raw_events',           label:'Kafka: raw_events',    icon:'📨', desc:'訂單事件 topic' },
+      { key:'orders_processed',     label:'Kafka: orders_processed', icon:'✅', desc:'ksqlDB 輸出' },
+      { key:'live_paid_orders',     label:'Kafka: live_paid_orders', icon:'💰', desc:'即時付費訂單' },
+    ];
+
+    const svcHtml = targetSvcs.map(function(s) {
+      const d = svcMap[s.key] || null;
+      const errRate = d && d.calls > 0 ? ((d.errs / d.calls) * 100).toFixed(1) : '0.0';
+      const latMs = d ? d.lat.toFixed(0) : '—';
+      const calls = d ? d.calls : 0;
+      const errCls = d && d.errs > 0 ? 'v-err' : 'v-ok';
+      const latCls = d && d.lat > 500 ? 'v-warn' : 'v-ok';
+      const statusDot = !d ? '⚫' : (d.errs > 0 ? '🔴' : '🟢');
+      return '<div class="instana-svc-card">'
+        + '<div class="instana-svc-name">' + statusDot + ' ' + s.icon + ' ' + s.label + '</div>'
+        + '<div style="color:#aaa;font-size:.72rem;margin-bottom:8px">' + s.desc + '</div>'
+        + '<div class="instana-svc-row"><span class="k">呼叫數</span><span class="v">' + calls + '</span></div>'
+        + '<div class="instana-svc-row"><span class="k">錯誤數</span><span class="v ' + errCls + '">' + (d ? d.errs : '—') + '</span></div>'
+        + '<div class="instana-svc-row"><span class="k">錯誤率</span><span class="v ' + errCls + '">' + errRate + '%</span></div>'
+        + '<div class="instana-svc-row"><span class="k">平均延遲</span><span class="v ' + latCls + '">' + (d ? latMs + 'ms' : '—') + '</span></div>'
+        + (calls === 0 ? '<div style="color:#aaa;font-size:.72rem;margin-top:6px">⚫ 過去 1 小時無流量</div>' : '')
+        + '</div>';
+    }).join('');
+    document.getElementById('instana-svc-grid').innerHTML = svcHtml || '<div style="color:#aaa">無服務資料</div>';
+
+    // ── Events ──
+    const eventsArr = raw.events_raw && raw.events_raw.events ? raw.events_raw.events : (Array.isArray(raw.events_raw) ? raw.events_raw : []);
+    const openEvents = eventsArr.filter(function(e) { return e.state === 'open'; });
+    const closedEvents = eventsArr.filter(function(e) { return e.state === 'closed'; }).slice(0, 5);
+
+    function eventCard(ev) {
+      const cls = ev.state === 'open' ? 'open' : (ev.type === 'change' ? 'change' : 'closed');
+      const sev = ev.severity >= 10 ? '🔴 嚴重' : ev.severity >= 5 ? '🟡 警告' : '🔵 資訊';
+      const stateLabel = ev.state === 'open' ? '⚠️ 開啟中' : '✓ 已關閉';
+      return '<div class="instana-event ' + cls + '">'
+        + '<div class="ev-title">' + (ev.state === 'open' ? '🚨 ' : '') + (ev.problem || '—') + '</div>'
+        + '<div class="ev-meta">'
+        + '<strong>' + (ev.entity ? ev.entity.label : '—') + '</strong>'
+        + '　' + stateLabel
+        + (ev.severity ? '　' + sev : '')
+        + '　' + (ev.age || '—')
+        + (ev.duration ? '　持續：' + ev.duration : '')
+        + '</div>'
+        + (ev.detail ? '<div style="font-size:.75rem;color:#666;margin-top:4px">' + ev.detail.substring(0,120) + '</div>' : '')
+        + '</div>';
+    }
+
+    let evHtml = '';
+    if (openEvents.length === 0) {
+      evHtml += '<div class="instana-event" style="border-left-color:#2e7d32"><div class="ev-title">🟢 目前沒有開啟中的告警</div></div>';
+    } else {
+      evHtml += openEvents.map(eventCard).join('');
+    }
+    if (closedEvents.length > 0) {
+      evHtml += '<div style="color:#aaa;font-size:.78rem;margin:10px 0 6px">─ 近期已關閉事件 ─</div>';
+      evHtml += closedEvents.map(eventCard).join('');
+    }
+    document.getElementById('instana-events-list').innerHTML = evHtml;
+
+  } catch(e) {
+    document.getElementById('instana-svc-grid').innerHTML = '<div style="color:#c0392b;padding:12px">⚠️ 載入失敗：' + e.message + '</div>';
+    document.getElementById('instana-events-list').innerHTML = '';
+  }
+
+  // auto-refresh every 60s
+  clearTimeout(_instanaTimer);
+  _instanaTimer = setTimeout(function() {
+    if (document.getElementById('section-instana').classList.contains('active')) loadInstana();
+  }, 60000);
+}
+
+const demoResultIds = {
+  'spot-error/service-down': 'demo-r-spot-down',
+  'mongo-error/auth-failure': 'demo-r-mongo-auth',
+  'mongo-error/service-down': 'demo-r-mongo-down'
+};
+async function runDemo(path, btn) {
+  const resultId = demoResultIds[path];
+  const el = document.getElementById(resultId);
+  btn.disabled = true; btn.textContent = '執行中...';
+  el.style.display = 'none';
+  try {
+    const r = await adminFetch('demo/' + path);
+    const data = await r.json();
+    el.style.display = 'block';
+    if (r.ok && data.status !== 'error') {
+      el.className = 'demo-result ok';
+      el.textContent = '✓ ' + JSON.stringify(data);
+    } else {
+      el.className = 'demo-result err';
+      el.textContent = '✗ [' + (data.error_type || 'error') + '] ' + (data.error_hint || data.error_detail || JSON.stringify(data));
+    }
+  } catch(e) {
+    el.style.display = 'block';
+    el.className = 'demo-result err';
+    el.textContent = '✗ 連線失敗：' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = btn.textContent.replace('執行中...', btn.textContent);
+    // restore original text
+    const labels = {
+      'spot-error/service-down': '觸發 spot-service 錯誤',
+      'mongo-error/auth-failure': '觸發 Mongo Auth 錯誤',
+      'mongo-error/service-down': '觸發 Mongo 服務中斷'
+    };
+    btn.textContent = labels[path];
+  }
+}
+</script>
+</body>
+</html>

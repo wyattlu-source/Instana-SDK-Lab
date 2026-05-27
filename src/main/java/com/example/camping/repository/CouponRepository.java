@@ -119,6 +119,18 @@ public class CouponRepository {
         return coupons;
     }
 
+    public List<Coupon> findAll() {
+        if (!mongoConfig.isAvailable()) return new ArrayList<>();
+        List<Coupon> coupons = new ArrayList<>();
+        mongoConfig.getDatabase()
+                .getCollection(COLLECTION)
+                .find()
+                .sort(new Document("createdAt", -1))
+                .into(new ArrayList<>())
+                .forEach(doc -> coupons.add(toCoupon(doc)));
+        return coupons;
+    }
+
     @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_FIND_AVAILABLE_SPAN, capturedStackFrames = 5)
     public List<Coupon> findAvailableCoupons(@TagParam("userId") String userId) {
         InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_FIND_AVAILABLE_SPAN,

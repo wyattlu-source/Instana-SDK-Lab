@@ -62,6 +62,31 @@ public class OrderRepository {
         return orders;
     }
 
+    public boolean cancelOrder(String orderId, String userId) {
+        if (!mongoConfig.isAvailable()) {
+            LOGGER.error("[ORDER-DB] cancelOrder failed - database unavailable, orderId: " + orderId);
+            throw new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用");
+        }
+        long modified = mongoConfig.getDatabase().getCollection(COLLECTION)
+                .updateOne(
+                        Filters.and(Filters.eq("orderId", orderId), Filters.eq("userId", userId)),
+                        new Document("$set", new Document("status", "cancelled"))
+                )
+                .getModifiedCount();
+        if (modified > 0) LOGGER.warn("[ORDER-DB] cancelled - orderId: " + orderId + " userId: " + userId);
+        return modified > 0;
+    }
+
+    public List<Order> findAll() {
+        if (!mongoConfig.isAvailable()) return new ArrayList<>();
+        List<Order> orders = new ArrayList<>();
+        mongoConfig.getDatabase().getCollection(COLLECTION)
+                .find()
+                .sort(new Document("createdAt", -1))
+                .forEach(doc -> orders.add(toOrder(doc)));
+        return orders;
+    }
+
     private Document toDocument(Order o) {
         Document doc = new Document()
                 .append("orderId", o.getOrderId())

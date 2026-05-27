@@ -42,7 +42,8 @@ public class UserRepository {
         InstanaTracing.method(Span.Type.EXIT, InstanaTracing.USER_REPO_FIND_SPAN, UserRepository.class.getName(), "findByEmail");
         annotateMongoExit(InstanaTracing.USER_REPO_FIND_SPAN, "find");
         if (!mongoConfig.isAvailable()) {
-            LOGGER.error("[MONGODB] findByEmail failed - database unavailable, email: " + email);
+            LOGGER.error("[MONGODB] findByEmail failed [{}], email: {}", mongoConfig.getErrorType(), email);
+            annotateMongoUnavailable();
             return Optional.empty();
         }
         Document doc = mongoConfig.getDatabase()
@@ -57,7 +58,8 @@ public class UserRepository {
         InstanaTracing.method(Span.Type.EXIT, InstanaTracing.USER_REPO_EXISTS_SPAN, UserRepository.class.getName(), "existsByEmail");
         annotateMongoExit(InstanaTracing.USER_REPO_EXISTS_SPAN, "count");
         if (!mongoConfig.isAvailable()) {
-            LOGGER.error("[MONGODB] existsByEmail failed - database unavailable, email: " + email);
+            LOGGER.error("[MONGODB] existsByEmail failed [{}], email: {}", mongoConfig.getErrorType(), email);
+            annotateMongoUnavailable();
             return false;
         }
         return mongoConfig.getDatabase()
@@ -72,7 +74,8 @@ public class UserRepository {
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用，請稍後再試");
-            LOGGER.error("[MONGODB] save failed - database unavailable, userId: " + user.getUserId(), ex);
+            LOGGER.error("[MONGODB] save failed [{}], userId: {}", mongoConfig.getErrorType(), user.getUserId(), ex);
+            annotateMongoUnavailable();
             InstanaTracing.error(Span.Type.EXIT, InstanaTracing.USER_REPO_SAVE_SPAN, ex);
             throw ex;
         }
@@ -86,6 +89,16 @@ public class UserRepository {
         com.instana.sdk.support.SpanSupport.annotate("tags.db.collection", COLLECTION);
         com.instana.sdk.support.SpanSupport.annotate("tags.db.operation", operation);
         com.instana.sdk.support.SpanSupport.annotate("tags.service", "camping-api");
+    }
+
+    private void annotateMongoUnavailable() {
+        com.instana.sdk.support.SpanSupport.annotate("tags.db.error", "true");
+        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_type",
+                mongoConfig.getErrorType() != null ? mongoConfig.getErrorType() : "unavailable");
+        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_hint",
+                mongoConfig.getErrorHint() != null ? mongoConfig.getErrorHint() : "MongoDB 連線失敗");
+        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_reason",
+                mongoConfig.getLastError() != null ? mongoConfig.getLastError() : "database not connected");
     }
 
     private User toUser(Document doc) {

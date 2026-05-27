@@ -7,7 +7,7 @@
     <title>Camping - 露營旅遊預訂平台</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Open+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script type="module" crossorigin src="./assets/index-BJiIS0NR.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-Cr0BHlHC.js">
@@ -15,248 +15,460 @@
     <link rel="stylesheet" crossorigin href="./assets/index-BQqgxKSf.css">
 
     <style>
-      /* ── Auth Modal ── */
+      :root {
+        --green:      #5c6b48;
+        --green-dark: #2e3320;
+        --green-mid:  #8fa67a;
+        --green-light:#e8eed8;
+        --orange:     #c9714e;
+        --orange-lt:  #fdf0eb;
+        --bg:         #f5f0e8;
+        --white:      #ffffff;
+        --shadow-sm:  0 2px 8px rgba(0,0,0,0.07);
+        --shadow-md:  0 6px 24px rgba(0,0,0,0.11);
+        --shadow-lg:  0 12px 40px rgba(0,0,0,0.16);
+        --radius:     12px;
+        --font:       'Noto Sans TC', 'Open Sans', sans-serif;
+      }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      /* ══ User Bar ══ */
+      #camp-user-bar {
+        position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+        background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+        color: #fff; padding: 0 20px;
+        font-family: var(--font); font-size: 0.85rem;
+        display: none; align-items: center; gap: 8px;
+        height: 48px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      }
+      #camp-user-bar.show { display: flex; }
+      #camp-user-name {
+        font-weight: 700; font-size: 0.9rem; margin-right: 4px;
+        display: flex; align-items: center; gap: 6px;
+      }
+      #camp-user-name::before {
+        content: ''; width: 28px; height: 28px; border-radius: 50%;
+        background: rgba(255,255,255,0.25); display: inline-flex;
+        align-items: center; justify-content: center;
+        font-size: 1rem; line-height: 28px; text-align: center;
+      }
+      .bar-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.3); margin: 0 4px; }
+      .bar-spacer { flex: 1; }
+      .camp-bar-btn {
+        background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+        color: #fff; padding: 5px 12px; border-radius: 20px; cursor: pointer;
+        font-size: 0.82rem; font-family: var(--font); font-weight: 500;
+        transition: background 0.2s, transform 0.1s;
+        display: flex; align-items: center; gap: 5px; white-space: nowrap;
+      }
+      .camp-bar-btn:hover { background: rgba(255,255,255,0.28); transform: translateY(-1px); }
+      .camp-bar-btn.btn-logout {
+        background: rgba(231,111,81,0.25); border-color: rgba(231,111,81,0.5);
+      }
+      .camp-bar-btn.btn-logout:hover { background: rgba(231,111,81,0.45); }
+
+      /* ══ Auth Modal ══ */
       #camp-auth-modal {
         display: none; position: fixed; inset: 0; z-index: 9999;
-        background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.5); align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
       }
       #camp-auth-modal.open { display: flex; }
       #camp-auth-box {
-        background: #fff; border-radius: 12px; padding: 36px 32px;
-        width: 360px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-        position: relative; font-family: 'Open Sans', sans-serif;
+        background: var(--white); border-radius: 20px; width: 380px; max-width: 95vw;
+        box-shadow: var(--shadow-lg); position: relative; font-family: var(--font);
+        overflow: hidden;
       }
-      #camp-auth-box h2 { margin: 0 0 20px; font-size: 1.4rem; color: #2d6a4f; }
-      #camp-auth-box .tab-btns { display: flex; gap: 8px; margin-bottom: 20px; }
-      #camp-auth-box .tab-btn {
-        flex: 1; padding: 8px; border: 2px solid #2d6a4f; border-radius: 6px;
-        background: #fff; color: #2d6a4f; cursor: pointer; font-size: 0.95rem; font-weight: 600;
+      .auth-header {
+        background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+        padding: 28px 32px 22px; color: #fff;
       }
-      #camp-auth-box .tab-btn.active { background: #2d6a4f; color: #fff; }
-      #camp-auth-box input {
-        width: 100%; box-sizing: border-box; padding: 10px 12px; margin-bottom: 12px;
-        border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem;
+      .auth-header h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+      .auth-header p { font-size: 0.85rem; opacity: 0.85; }
+      .auth-body { padding: 24px 32px 28px; }
+      .tab-btns { display: flex; gap: 0; margin-bottom: 22px; border-radius: 8px; overflow: hidden; border: 1.5px solid #e0e0e0; }
+      .tab-btn {
+        flex: 1; padding: 9px; border: none; background: #f5f5f5;
+        color: #666; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+        font-family: var(--font); transition: all 0.2s;
       }
-      #camp-auth-box .auth-submit {
-        width: 100%; padding: 11px; background: #2d6a4f; color: #fff;
-        border: none; border-radius: 6px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 4px;
+      .tab-btn.active { background: var(--green); color: #fff; }
+      .auth-field { margin-bottom: 14px; }
+      .auth-field label { display: block; font-size: 0.8rem; color: #666; margin-bottom: 5px; font-weight: 600; letter-spacing: 0.3px; }
+      .auth-field input {
+        width: 100%; padding: 10px 14px; border: 1.5px solid #e0e0e0;
+        border-radius: 8px; font-size: 0.95rem; font-family: var(--font);
+        transition: border-color 0.2s, box-shadow 0.2s; outline: none;
       }
-      #camp-auth-box .auth-submit:hover { background: #1b4332; }
-      #camp-auth-box .auth-msg { margin-top: 10px; font-size: 0.88rem; min-height: 20px; }
-      #camp-auth-box .auth-msg.err { color: #c0392b; }
-      #camp-auth-box .auth-msg.ok { color: #2d6a4f; }
+      .auth-field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
+      .auth-submit {
+        width: 100%; padding: 12px; background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+        color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
+        cursor: pointer; margin-top: 6px; font-family: var(--font);
+        transition: opacity 0.2s, transform 0.1s;
+        box-shadow: 0 4px 12px rgba(45,106,79,0.3);
+      }
+      .auth-submit:hover { opacity: 0.92; transform: translateY(-1px); }
+      .auth-msg { margin-top: 10px; font-size: 0.85rem; min-height: 18px; border-radius: 6px; padding: 0 4px; }
+      .auth-msg.err { color: #c0392b; }
+      .auth-msg.ok  { color: var(--green); }
       #camp-auth-close {
-        position: absolute; top: 12px; right: 16px; font-size: 1.3rem;
-        background: none; border: none; cursor: pointer; color: #666;
+        position: absolute; top: 14px; right: 16px; font-size: 1.1rem;
+        background: rgba(255,255,255,0.25); border: none; cursor: pointer; color: #fff;
+        width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s;
       }
+      #camp-auth-close:hover { background: rgba(255,255,255,0.4); }
 
-      /* ── User Bar ── */
-      #camp-user-bar {
-        position: fixed; top: 0; right: 0; z-index: 9998;
-        background: #2d6a4f; color: #fff; padding: 6px 16px;
-        font-size: 0.85rem; font-family: 'Open Sans', sans-serif;
-        border-bottom-left-radius: 8px; display: none; align-items: center; gap: 10px;
-      }
-      #camp-user-bar.show { display: flex; }
-      .camp-bar-btn {
-        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.5);
-        color: #fff; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.82rem;
-      }
-      .camp-bar-btn:hover { background: rgba(255,255,255,0.35); }
-
-      /* ── Common Modal ── */
+      /* ══ Common Modal ══ */
       .camp-modal-overlay {
         display: none; position: fixed; inset: 0; z-index: 9997;
-        background: rgba(0,0,0,0.6); align-items: flex-start;
-        justify-content: center; overflow-y: auto; padding: 40px 16px;
+        background: rgba(0,0,0,0.55); align-items: flex-start;
+        justify-content: center; overflow-y: auto; padding: 60px 16px 40px;
+        backdrop-filter: blur(3px);
       }
       .camp-modal-overlay.open { display: flex; }
       .camp-modal-box {
-        background: #fff; border-radius: 16px; padding: 32px;
-        width: 100%; max-width: 900px; font-family: 'Open Sans', sans-serif;
+        background: var(--white); border-radius: 20px;
+        width: 100%; max-width: 960px; font-family: var(--font);
         position: relative; margin-bottom: 40px;
+        box-shadow: var(--shadow-lg); overflow: hidden;
       }
-      .camp-modal-box h2 { margin: 0 0 20px; font-size: 1.4rem; color: #333; }
+      .modal-header {
+        background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+        padding: 22px 28px; color: #fff; display: flex; align-items: center; gap: 12px;
+      }
+      .modal-header h2 { font-size: 1.25rem; font-weight: 700; flex: 1; }
+      .modal-header .modal-icon { font-size: 1.4rem; }
+      .modal-body { padding: 28px; }
       .camp-modal-close {
-        position: absolute; top: 16px; right: 16px; background: none;
-        border: none; font-size: 1.3rem; cursor: pointer; color: #666;
+        background: rgba(255,255,255,0.2); border: none; font-size: 1rem;
+        cursor: pointer; color: #fff; width: 30px; height: 30px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s; flex-shrink: 0;
       }
-      .camp-empty { color: #888; padding: 20px 0; text-align: center; }
-      .camp-error { color: #c0392b; padding: 12px; }
+      .camp-modal-close:hover { background: rgba(255,255,255,0.35); }
+      .camp-empty { color: #aaa; padding: 40px 0; text-align: center; font-size: 0.95rem; }
+      .camp-empty::before { content: '📭'; display: block; font-size: 2.5rem; margin-bottom: 10px; }
+      .camp-error { color: #c0392b; padding: 16px; background: #fff5f5; border-radius: 8px; border: 1px solid #ffc0c0; }
 
-      /* ── Spot Cards ── */
+      /* ══ Spot Cards ══ */
       .camp-spot-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px;
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 22px;
       }
       .camp-spot-card {
-        border: 1px solid #eee; border-radius: 12px; overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07); transition: box-shadow 0.2s;
+        border-radius: var(--radius); overflow: hidden;
+        box-shadow: var(--shadow-sm); transition: box-shadow 0.25s, transform 0.25s;
+        background: var(--white); border: 1px solid #eef2ee;
       }
-      .camp-spot-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.14); }
-      .camp-spot-card img { width: 100%; height: 160px; object-fit: cover; }
-      .camp-spot-card-body { padding: 16px; }
-      .camp-spot-card-body h3 { margin: 0 0 8px; font-size: 16px; color: #333; }
-      .camp-spot-card-body p { margin: 0 0 12px; font-size: 13px; color: #666; line-height: 1.5; }
-      .camp-spot-card-actions { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
-      .camp-price-tag {
-        background: #ff6b35; color: #fff; padding: 4px 12px;
-        border-radius: 20px; font-size: 13px; font-weight: 600;
+      .camp-spot-card:hover { box-shadow: var(--shadow-md); transform: translateY(-4px); }
+      .camp-spot-img-wrap { position: relative; height: 170px; overflow: hidden; background: #e8f5e9; }
+      .camp-spot-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
+      .camp-spot-card:hover .camp-spot-img-wrap img { transform: scale(1.06); }
+      .camp-spot-img-wrap .price-badge {
+        position: absolute; bottom: 10px; right: 10px;
+        background: var(--orange); color: #fff; padding: 4px 12px;
+        border-radius: 20px; font-size: 12px; font-weight: 700;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
+      .camp-no-img {
+        width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+        font-size: 3rem; background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      }
+      .camp-spot-card-body { padding: 16px 18px 18px; }
+      .camp-spot-card-body h3 { font-size: 15px; color: #222; font-weight: 700; margin-bottom: 7px; }
+      .camp-spot-card-body p { font-size: 12.5px; color: #666; line-height: 1.6; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+      .camp-spot-card-actions { display: flex; gap: 8px; align-items: center; }
       .camp-btn-fav {
         background: none; border: 1.5px solid #e74c3c; color: #e74c3c;
-        padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
-        transition: all 0.2s;
+        padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+        font-family: var(--font); font-weight: 600; transition: all 0.2s; flex-shrink: 0;
       }
       .camp-btn-fav:hover, .camp-btn-fav.active { background: #e74c3c; color: #fff; }
       .camp-btn-book {
-        background: #2d6a4f; color: #fff; border: none;
-        padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
-        transition: background 0.2s; margin-left: auto;
+        flex: 1; background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+        color: #fff; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+        font-size: 12px; font-family: var(--font); font-weight: 700;
+        transition: opacity 0.2s, transform 0.1s;
+        box-shadow: 0 2px 8px rgba(45,106,79,0.25);
       }
-      .camp-btn-book:hover { background: #1b4332; }
+      .camp-btn-book:hover { opacity: 0.88; transform: translateY(-1px); }
 
-      /* ── Booking Modal ── */
+      /* ══ Booking Modal ══ */
       #camp-book-modal { z-index: 10000; }
-      #camp-book-box { max-width: 480px; }
-      .book-field { margin-bottom: 16px; }
-      .book-field label { display: block; font-size: 0.88rem; color: #555; margin-bottom: 5px; font-weight: 600; }
+      #camp-book-box { max-width: 500px; }
+      #camp-book-box .modal-body { padding: 26px 28px; }
+      .book-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+      .book-field { margin-bottom: 0; }
+      .book-field.full { grid-column: 1 / -1; }
+      .book-field label {
+        display: block; font-size: 0.78rem; color: #666; margin-bottom: 5px;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      }
       .book-field input[type=date], .book-field input[type=text] {
-        width: 100%; box-sizing: border-box; padding: 9px 12px;
-        border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem;
+        width: 100%; padding: 9px 12px; border: 1.5px solid #e0e0e0;
+        border-radius: 8px; font-size: 0.9rem; font-family: var(--font);
+        transition: border-color 0.2s; outline: none;
       }
+      .book-field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(45,106,79,0.1); }
       .book-summary {
-        background: #f8f9fa; border-radius: 8px; padding: 14px 16px; margin: 16px 0;
-        font-size: 0.9rem; line-height: 1.8;
+        background: var(--bg); border-radius: 10px; padding: 16px 18px; margin: 16px 0;
+        border: 1px solid #d8f3dc;
       }
-      .book-summary .sum-row { display: flex; justify-content: space-between; }
-      .book-summary .sum-total { font-weight: 700; color: #2d6a4f; font-size: 1rem; }
+      .book-summary .sum-row {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 0.88rem; padding: 4px 0; color: #555;
+      }
+      .book-summary .sum-row + .sum-row { border-top: 1px solid #e8f5e9; margin-top: 2px; }
+      .sum-total { font-weight: 700 !important; color: var(--green) !important; font-size: 1rem !important; padding-top: 8px !important; border-top: 2px solid #b7e4c7 !important; margin-top: 4px !important; }
       #camp-book-submit {
-        width: 100%; padding: 12px; background: #2d6a4f; color: #fff;
-        border: none; border-radius: 8px; font-size: 1rem; font-weight: 700;
-        cursor: pointer; margin-top: 4px;
+        width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+        color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+        cursor: pointer; font-family: var(--font); box-shadow: 0 4px 14px rgba(45,106,79,0.3);
+        transition: opacity 0.2s, transform 0.1s;
       }
-      #camp-book-submit:hover { background: #1b4332; }
-      #camp-book-msg { margin-top: 10px; font-size: 0.88rem; min-height: 20px; }
+      #camp-book-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+      #camp-book-msg { margin-top: 12px; font-size: 0.87rem; min-height: 20px; padding: 0 2px; border-radius: 6px; }
       #camp-book-msg.err { color: #c0392b; }
-      #camp-book-msg.ok { color: #2d6a4f; }
+      #camp-book-msg.ok  { color: var(--green); font-weight: 600; }
 
-      /* ── Orders & Favorites lists ── */
+      /* ══ List Items ══ */
       .camp-list-item {
-        border: 1px solid #eee; border-radius: 10px; padding: 16px 20px;
-        margin-bottom: 12px; font-size: 0.9rem; line-height: 1.7;
+        border: 1px solid #eef2ee; border-radius: var(--radius); padding: 18px 20px;
+        margin-bottom: 14px; font-size: 0.88rem; line-height: 1.75;
+        background: var(--white); transition: box-shadow 0.2s;
       }
-      .camp-list-item h4 { margin: 0 0 8px; font-size: 1rem; color: #333; }
+      .camp-list-item:hover { box-shadow: var(--shadow-sm); }
+      .camp-list-item h4 { font-size: 1rem; color: #222; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+      .camp-list-item .meta { color: #777; font-size: 0.83rem; }
+      .camp-list-item .amount { font-weight: 700; color: var(--green); font-size: 0.95rem; }
       .camp-badge {
-        display: inline-block; padding: 2px 10px; border-radius: 12px;
-        font-size: 0.78rem; font-weight: 600;
+        display: inline-block; padding: 2px 10px; border-radius: 20px;
+        font-size: 0.76rem; font-weight: 700; letter-spacing: 0.3px;
       }
       .badge-green { background: #d4edda; color: #155724; }
       .badge-gray  { background: #e9ecef; color: #495057; }
       .badge-red   { background: #f8d7da; color: #721c24; }
+      .badge-orange{ background: #fff3cd; color: #856404; }
+
+      /* ══ Coupon Card ══ */
+      .coupon-card {
+        border-radius: var(--radius); overflow: hidden; margin-bottom: 14px;
+        border: 1.5px solid #d8f3dc; background: var(--white);
+        display: flex; transition: box-shadow 0.2s;
+      }
+      .coupon-card:hover { box-shadow: var(--shadow-sm); }
+      .coupon-card.used   { border-color: #e0e0e0; opacity: 0.65; }
+      .coupon-card.expired{ border-color: #ffc0c0; opacity: 0.65; }
+      .coupon-left {
+        background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+        color: #fff; padding: 16px 20px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; min-width: 100px;
+      }
+      .coupon-card.used   .coupon-left { background: #aaa; }
+      .coupon-card.expired .coupon-left { background: #e74c3c; }
+      .coupon-left .discount { font-size: 1.4rem; font-weight: 900; line-height: 1; }
+      .coupon-left .off      { font-size: 0.72rem; opacity: 0.85; margin-top: 3px; }
+      .coupon-right { padding: 14px 18px; flex: 1; }
+      .coupon-code { font-family: monospace; font-size: 1rem; letter-spacing: 2px; font-weight: 700; color: #333; margin-bottom: 5px; }
+      .coupon-meta { font-size: 0.8rem; color: #777; line-height: 1.7; }
+
+      /* ══ Processing Status ══ */
+      .camp-status-btn {
+        margin-top: 12px; padding: 6px 16px; font-size: 0.82rem;
+        background: #eaf4fb; border: 1px solid #90caf9; color: #1565c0;
+        border-radius: 20px; cursor: pointer; font-weight: 700; font-family: var(--font);
+        transition: background 0.2s;
+      }
+      .camp-status-btn:hover { background: #bbdefb; }
+      .camp-processing-status { margin-top: 10px; }
+      .camp-processing-pending { color: #888; font-size: 0.85rem; padding: 8px 0; }
+      .camp-processing-box {
+        background: #f0f7ff; border: 1px solid #90caf9; border-radius: 10px;
+        padding: 16px 18px; font-size: 0.85rem;
+      }
+      .ps-header { font-weight: 700; color: #1565c0; margin-bottom: 12px; font-size: 0.9rem; }
+      .ps-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .ps-step-card {
+        background: #fff; border-radius: 8px; padding: 10px 12px;
+        border: 1px solid #e3eeff;
+      }
+      .ps-step-title { font-weight: 700; color: #333; font-size: 0.83rem; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+      .ps-detail { color: #666; font-size: 0.78rem; line-height: 1.6; }
+      .ps-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.74rem; font-weight: 700; }
+      .ps-ok      { background: #d4edda; color: #155724; }
+      .ps-pending { background: #fff3cd; color: #856404; }
+
+      /* ══ Loading spinner ══ */
+      .camp-loading {
+        display: flex; align-items: center; justify-content: center;
+        padding: 40px; gap: 10px; color: #999; font-size: 0.9rem;
+      }
+      .spinner {
+        width: 20px; height: 20px; border-radius: 50%;
+        border: 2.5px solid #d8f3dc; border-top-color: var(--green);
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* ══ Toast ══ */
+      .camp-toast {
+        position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: linear-gradient(135deg, var(--green-dark), var(--green));
+        color: #fff; padding: 12px 26px; border-radius: 30px;
+        font-family: var(--font); font-size: 0.9rem; z-index: 10002;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.25); max-width: 90vw; text-align: center;
+        opacity: 0; transition: opacity 0.3s, transform 0.3s;
+      }
+      .camp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+      /* Body padding for user bar */
+      body.bar-visible { padding-top: 48px; }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
-    <!-- User Bar -->
+    <!-- ══ User Bar ══ -->
     <div id="camp-user-bar">
-      <span id="camp-user-name"></span>
+      <i class="fa-solid fa-tent" style="font-size:1.1rem;opacity:.8"></i>
+      <span id="camp-user-name">使用者</span>
+      <div class="bar-divider"></div>
+      <button class="camp-bar-btn" id="camp-browse-bar-btn">🏕 瀏覽景點</button>
       <button class="camp-bar-btn" id="camp-favorites-btn">❤ 我的收藏</button>
-      <button class="camp-bar-btn" id="camp-coupons-btn">🎫 我的優惠券</button>
+      <button class="camp-bar-btn" id="camp-coupons-btn">🎫 優惠券</button>
       <button class="camp-bar-btn" id="camp-orders-btn">📋 我的訂單</button>
-      <button class="camp-bar-btn" id="camp-logout-btn">登出</button>
+      <button class="camp-bar-btn" id="camp-admin-btn" style="display:none;background:rgba(201,113,78,0.25);border-color:rgba(201,113,78,0.5)">⚙️ 後台管理</button>
+      <div class="bar-spacer"></div>
+      <button class="camp-bar-btn btn-logout" id="camp-logout-btn">登出</button>
     </div>
 
-    <!-- Auth Modal -->
+    <!-- ══ Auth Modal ══ -->
     <div id="camp-auth-modal">
       <div id="camp-auth-box">
         <button id="camp-auth-close">✕</button>
-        <h2 id="camp-auth-title">登入</h2>
-        <div class="tab-btns">
-          <button class="tab-btn active" id="tab-login">登入</button>
-          <button class="tab-btn" id="tab-register">註冊</button>
+        <div class="auth-header">
+          <h2 id="camp-auth-title">歡迎回來</h2>
+          <p>露營旅遊預訂平台</p>
         </div>
-        <div id="camp-login-form">
-          <input type="email" id="login-email" placeholder="Email" />
-          <input type="password" id="login-password" placeholder="密碼" />
-          <button class="auth-submit" id="do-login">登入</button>
+        <div class="auth-body">
+          <div class="tab-btns">
+            <button class="tab-btn active" id="tab-login">登入</button>
+            <button class="tab-btn" id="tab-register">註冊帳號</button>
+          </div>
+          <div id="camp-login-form">
+            <div class="auth-field"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com" /></div>
+            <div class="auth-field"><label>密碼</label><input type="password" id="login-password" placeholder="••••••" /></div>
+            <button class="auth-submit" id="do-login">登入</button>
+          </div>
+          <div id="camp-register-form" style="display:none">
+            <div class="auth-field"><label>姓名</label><input type="text" id="reg-name" placeholder="您的名字" /></div>
+            <div class="auth-field"><label>Email</label><input type="email" id="reg-email" placeholder="your@email.com" /></div>
+            <div class="auth-field"><label>密碼（至少 6 字元）</label><input type="password" id="reg-password" placeholder="••••••" /></div>
+            <button class="auth-submit" id="do-register">建立帳號</button>
+          </div>
+          <div class="auth-msg" id="auth-msg"></div>
         </div>
-        <div id="camp-register-form" style="display:none">
-          <input type="text" id="reg-name" placeholder="姓名" />
-          <input type="email" id="reg-email" placeholder="Email" />
-          <input type="password" id="reg-password" placeholder="密碼（至少 6 字元）" />
-          <button class="auth-submit" id="do-register">註冊</button>
-        </div>
-        <div class="auth-msg" id="auth-msg"></div>
       </div>
     </div>
 
-    <!-- Browse Spots Modal -->
+    <!-- ══ Browse Spots Modal ══ -->
     <div id="camp-browse-modal" class="camp-modal-overlay">
       <div class="camp-modal-box">
-        <button class="camp-modal-close" id="camp-browse-close">✕</button>
-        <h2>全部景點</h2>
-        <div id="camp-browse-list" class="camp-spot-grid">
-          <p style="color:#888;">載入中...</p>
+        <div class="modal-header">
+          <span class="modal-icon">🏕️</span>
+          <h2>探索所有露營景點</h2>
+          <button class="camp-modal-close" id="camp-browse-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="camp-browse-list" class="camp-spot-grid">
+            <div class="camp-loading"><div class="spinner"></div>載入中...</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Favorites Modal -->
+    <!-- ══ Favorites Modal ══ -->
     <div id="camp-fav-modal" class="camp-modal-overlay">
       <div class="camp-modal-box">
-        <button class="camp-modal-close" id="camp-fav-close">✕</button>
-        <h2>❤ 我的收藏紀錄</h2>
-        <div id="camp-fav-list"><p class="camp-empty">載入中...</p></div>
+        <div class="modal-header">
+          <span class="modal-icon">❤️</span>
+          <h2>我的收藏紀錄</h2>
+          <button class="camp-modal-close" id="camp-fav-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="camp-fav-list"><div class="camp-loading"><div class="spinner"></div>載入中...</div></div>
+        </div>
       </div>
     </div>
 
-    <!-- Orders Modal -->
+    <!-- ══ Orders Modal ══ -->
     <div id="camp-orders-modal" class="camp-modal-overlay">
       <div class="camp-modal-box">
-        <button class="camp-modal-close" id="camp-orders-close">✕</button>
-        <h2>📋 我的訂單</h2>
-        <div id="camp-orders-list"><p class="camp-empty">載入中...</p></div>
+        <div class="modal-header">
+          <span class="modal-icon">📋</span>
+          <h2>我的訂單記錄</h2>
+          <button class="camp-modal-close" id="camp-orders-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="camp-orders-list"><div class="camp-loading"><div class="spinner"></div>載入中...</div></div>
+        </div>
       </div>
     </div>
 
-    <!-- Coupons Modal -->
+    <!-- ══ Coupons Modal ══ -->
     <div id="camp-coupons-modal" class="camp-modal-overlay">
-      <div class="camp-modal-box">
-        <button class="camp-modal-close" id="camp-coupons-close">✕</button>
-        <h2>🎫 我的優惠券</h2>
-        <div id="camp-coupons-list"><p class="camp-empty">載入中...</p></div>
+      <div class="camp-modal-box" style="max-width:680px">
+        <div class="modal-header">
+          <span class="modal-icon">🎫</span>
+          <h2>我的優惠券</h2>
+          <button class="camp-modal-close" id="camp-coupons-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="camp-coupons-list"><div class="camp-loading"><div class="spinner"></div>載入中...</div></div>
+        </div>
       </div>
     </div>
 
-    <!-- Booking Modal -->
-    <div id="camp-book-modal" class="camp-modal-overlay">
+    <!-- ══ Booking Modal ══ -->
+    <div id="camp-book-modal" class="camp-modal-overlay" style="z-index:10000">
       <div class="camp-modal-box" id="camp-book-box">
-        <button class="camp-modal-close" id="camp-book-close">✕</button>
-        <h2 id="camp-book-title">預訂景點</h2>
-        <div class="book-field">
-          <label>入住日期</label>
-          <input type="date" id="book-checkin" />
+        <div class="modal-header">
+          <span class="modal-icon">📅</span>
+          <h2 id="camp-book-title">預訂景點</h2>
+          <button class="camp-modal-close" id="camp-book-close">✕</button>
         </div>
-        <div class="book-field">
-          <label>退房日期（可選多天）</label>
-          <input type="date" id="book-checkout" />
+        <div class="modal-body">
+          <div class="book-grid">
+            <div class="book-field">
+              <label><i class="fa-regular fa-calendar-check"></i> 入住日期</label>
+              <input type="date" id="book-checkin" />
+            </div>
+            <div class="book-field">
+              <label><i class="fa-regular fa-calendar-xmark"></i> 退房日期</label>
+              <input type="date" id="book-checkout" />
+            </div>
+            <div class="book-field full">
+              <label><i class="fa-solid fa-tag"></i> 優惠券代碼（選填）</label>
+              <input type="text" id="book-coupon" placeholder="輸入優惠券代碼" />
+            </div>
+          </div>
+          <div class="book-summary">
+            <div class="sum-row"><span>住宿天數</span><span id="sum-nights">—</span></div>
+            <div class="sum-row"><span>每晚單價</span><span id="sum-unit">—</span></div>
+            <div class="sum-row"><span>小計</span><span id="sum-total">—</span></div>
+            <div class="sum-row"><span>優惠券折扣</span><span id="sum-discount" style="color:#e74c3c">—</span></div>
+            <div class="sum-row sum-total"><span>💳 應付金額</span><span id="sum-final">—</span></div>
+          </div>
+          <button id="camp-book-submit">確認預訂</button>
+          <div id="camp-book-msg"></div>
         </div>
-        <div class="book-field">
-          <label>優惠券代碼（選填）</label>
-          <input type="text" id="book-coupon" placeholder="輸入優惠券代碼" />
-        </div>
-        <div class="book-summary" id="book-summary">
-          <div class="sum-row"><span>住宿天數</span><span id="sum-nights">—</span></div>
-          <div class="sum-row"><span>每晚價格</span><span id="sum-unit">—</span></div>
-          <div class="sum-row"><span>小計</span><span id="sum-total">—</span></div>
-          <div class="sum-row"><span>優惠券折扣</span><span id="sum-discount">—</span></div>
-          <div class="sum-row sum-total"><span>應付金額</span><span id="sum-final">—</span></div>
-        </div>
-        <button id="camp-book-submit">確認預訂</button>
-        <div id="camp-book-msg"></div>
       </div>
     </div>
+
+    <!-- ══ Toast ══ -->
+    <div id="camp-toast" class="camp-toast"></div>
 
     <script>
     (function () {
@@ -265,8 +477,9 @@
         const ctx = parts.length > 0 ? '/' + parts[0] : '';
         return window.location.origin + ctx + '/api';
       })();
+      const IMG_BASE = BASE.replace('/api', '');
 
-      // ── Patch fetch: auto-attach Bearer token ──
+      /* ── Patch fetch with auth token ── */
       const _fetch = window.fetch;
       window.fetch = function (url, opts) {
         opts = opts || {};
@@ -277,7 +490,14 @@
         return _fetch(url, opts);
       };
 
-      // ── Auth helpers ──
+      /* ── Toast ── */
+      function showToast(msg) {
+        const t = document.getElementById('camp-toast');
+        t.textContent = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+      }
+
+      /* ── Auth helpers ── */
       function showModal() { document.getElementById('camp-auth-modal').classList.add('open'); }
       function hideModal() {
         document.getElementById('camp-auth-modal').classList.remove('open');
@@ -290,24 +510,36 @@
         el.className = 'auth-msg ' + (isErr ? 'err' : 'ok');
       }
       function isLoggedIn() { return !!localStorage.getItem('camping_token'); }
+      const ENGINEER_EMAILS = ['wyattlu25@gmail.com'];
       function updateUserBar() {
-        const name = localStorage.getItem('camping_user_name');
-        const bar = document.getElementById('camp-user-bar');
+        const name  = localStorage.getItem('camping_user_name');
+        const email = localStorage.getItem('camping_user_email') || '';
+        const bar   = document.getElementById('camp-user-bar');
         if (name) {
-          document.getElementById('camp-user-name').textContent = '👤 ' + name;
+          document.getElementById('camp-user-name').textContent = name;
           bar.classList.add('show');
+          document.body.classList.add('bar-visible');
         } else {
           bar.classList.remove('show');
+          document.body.classList.remove('bar-visible');
         }
+        // Show admin button only for engineer accounts
+        document.getElementById('camp-admin-btn').style.display =
+          (name && ENGINEER_EMAILS.includes(email)) ? '' : 'none';
+        // Hide React Sign in / Sign up buttons when logged in
+        document.querySelectorAll('button[data-camp-hooked="1"]').forEach(function(btn) {
+          const t = btn.textContent.trim();
+          if (t === 'Sign in' || t === 'Sign up') btn.style.display = name ? 'none' : '';
+        });
       }
 
-      // ── Tab switching ──
+      /* ── Tab switching ── */
       document.getElementById('tab-login').onclick = function () {
         this.classList.add('active');
         document.getElementById('tab-register').classList.remove('active');
         document.getElementById('camp-login-form').style.display = '';
         document.getElementById('camp-register-form').style.display = 'none';
-        document.getElementById('camp-auth-title').textContent = '登入';
+        document.getElementById('camp-auth-title').textContent = '歡迎回來';
         setMsg('', false);
       };
       document.getElementById('tab-register').onclick = function () {
@@ -315,17 +547,18 @@
         document.getElementById('tab-login').classList.remove('active');
         document.getElementById('camp-register-form').style.display = '';
         document.getElementById('camp-login-form').style.display = 'none';
-        document.getElementById('camp-auth-title').textContent = '註冊';
+        document.getElementById('camp-auth-title').textContent = '建立新帳號';
         setMsg('', false);
       };
       document.getElementById('camp-auth-close').onclick = hideModal;
       document.getElementById('camp-auth-modal').onclick = function (e) { if (e.target === this) hideModal(); };
 
-      // ── Login ──
+      /* ── Login ── */
       document.getElementById('do-login').onclick = async function () {
         const email = document.getElementById('login-email').value.trim();
         const password = document.getElementById('login-password').value;
         if (!email || !password) { setMsg('請填寫 Email 與密碼', true); return; }
+        this.textContent = '登入中...'; this.disabled = true;
         try {
           const res = await _fetch(BASE + '/auth/login', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -336,18 +569,20 @@
           localStorage.setItem('camping_token', data.token);
           localStorage.setItem('camping_user_name', data.name);
           localStorage.setItem('camping_user_email', data.email);
-          setMsg('登入成功！', false);
+          setMsg('✅ 登入成功！', false);
           updateUserBar();
-          setTimeout(hideModal, 800);
+          setTimeout(hideModal, 700);
         } catch (e) { setMsg('登入失敗：' + e.message, true); }
+        finally { this.textContent = '登入'; this.disabled = false; }
       };
 
-      // ── Register ──
+      /* ── Register ── */
       document.getElementById('do-register').onclick = async function () {
         const name = document.getElementById('reg-name').value.trim();
         const email = document.getElementById('reg-email').value.trim();
         const password = document.getElementById('reg-password').value;
         if (!name || !email || !password) { setMsg('請填寫所有欄位', true); return; }
+        this.textContent = '建立中...'; this.disabled = true;
         try {
           const res = await _fetch(BASE + '/auth/register', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -358,13 +593,14 @@
           localStorage.setItem('camping_token', data.token);
           localStorage.setItem('camping_user_name', data.name);
           localStorage.setItem('camping_user_email', data.email);
-          setMsg('註冊成功！', false);
+          setMsg('✅ 註冊成功！', false);
           updateUserBar();
-          setTimeout(hideModal, 800);
+          setTimeout(hideModal, 700);
         } catch (e) { setMsg('註冊失敗：' + e.message, true); }
+        finally { this.textContent = '建立帳號'; this.disabled = false; }
       };
 
-      // ── Logout ──
+      /* ── Logout ── */
       document.getElementById('camp-logout-btn').onclick = async function () {
         const token = localStorage.getItem('camping_token');
         if (token) {
@@ -376,54 +612,66 @@
         localStorage.removeItem('camping_user_name');
         localStorage.removeItem('camping_user_email');
         updateUserBar();
+        showToast('已成功登出');
       };
 
-      // ── Modal open/close helpers ──
-      function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+      /* ── Modal helpers ── */
+      const OVERLAYS = ['camp-browse-modal','camp-fav-modal','camp-coupons-modal','camp-orders-modal','camp-book-modal'];
+      function openOverlay(id) {
+        OVERLAYS.forEach(oid => { if (oid !== id) document.getElementById(oid).classList.remove('open'); });
+        document.getElementById(id).classList.add('open');
+      }
       function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
       ['camp-browse-modal','camp-fav-modal','camp-coupons-modal','camp-orders-modal','camp-book-modal'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeOverlay(id); });
       });
-      document.getElementById('camp-browse-close').onclick = function() { closeOverlay('camp-browse-modal'); };
-      document.getElementById('camp-fav-close').onclick = function() { closeOverlay('camp-fav-modal'); };
-      document.getElementById('camp-coupons-close').onclick = function() { closeOverlay('camp-coupons-modal'); };
-      document.getElementById('camp-orders-close').onclick = function() { closeOverlay('camp-orders-modal'); };
-      document.getElementById('camp-book-close').onclick = function() { closeOverlay('camp-book-modal'); };
+      document.getElementById('camp-browse-close').onclick  = () => closeOverlay('camp-browse-modal');
+      document.getElementById('camp-fav-close').onclick     = () => closeOverlay('camp-fav-modal');
+      document.getElementById('camp-coupons-close').onclick = () => closeOverlay('camp-coupons-modal');
+      document.getElementById('camp-orders-close').onclick  = () => closeOverlay('camp-orders-modal');
+      document.getElementById('camp-book-close').onclick    = () => closeOverlay('camp-book-modal');
 
-      // ── Browse Spots ──
+      /* ── Browse Spots ── */
       var _spotsCache = null;
       async function openBrowseModal() {
         openOverlay('camp-browse-modal');
         if (_spotsCache) { renderSpots(_spotsCache); return; }
-        document.getElementById('camp-browse-list').innerHTML = '<p style="color:#888;">載入中...</p>';
+        document.getElementById('camp-browse-list').innerHTML = '<div class="camp-loading"><div class="spinner"></div>載入景點中...</div>';
         try {
           const r = await window.fetch(BASE + '/spot');
           const resp = await r.json();
           _spotsCache = resp.data || [];
           renderSpots(_spotsCache);
         } catch (err) {
-          document.getElementById('camp-browse-list').innerHTML = '<p class="camp-error">載入失敗：' + err.message + '</p>';
+          document.getElementById('camp-browse-list').innerHTML = '<p class="camp-error"><i class="fa-solid fa-circle-exclamation"></i> 載入失敗：' + err.message + '</p>';
         }
       }
 
       function renderSpots(spots) {
         const list = document.getElementById('camp-browse-list');
-        if (!spots.length) { list.innerHTML = '<p class="camp-empty">目前沒有景點資料。</p>'; return; }
+        if (!spots.length) {
+          list.innerHTML = '<div class="camp-empty">目前沒有景點資料</div>';
+          return;
+        }
         list.className = 'camp-spot-grid';
         list.innerHTML = spots.map(function(s) {
-          return '<div class="camp-spot-card" data-spot-id="' + s.spot_id + '" data-spot-name="' + s.spot_name + '" data-price="' + s.price + '">'
-            + '<img src="' + s.spot_img_url + '" alt="' + s.spot_name + '" onerror="this.style.display=\'none\'">'
+          const imgSrc = s.spot_img_url ? IMG_BASE + s.spot_img_url : null;
+          const imgHtml = imgSrc
+            ? '<img src="' + imgSrc + '" alt="' + s.spot_name + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=camp-no-img>🏕️</div>\'">'
+            : '<div class="camp-no-img">🏕️</div>';
+          return '<div class="camp-spot-card">'
+            + '<div class="camp-spot-img-wrap">' + imgHtml
+            + '<span class="price-badge">$' + s.price + ' / 晚</span>'
+            + '</div>'
             + '<div class="camp-spot-card-body">'
             + '<h3>' + s.spot_name + '</h3>'
-            + '<p>' + s.describe + '</p>'
-            + '<span class="camp-price-tag">$' + s.price + ' / 每晚</span>'
+            + '<p>' + (s.describe || '') + '</p>'
             + '<div class="camp-spot-card-actions">'
-            + '<button class="camp-btn-fav" data-spot-id="' + s.spot_id + '" data-spot-name="' + s.spot_name + '">❤ 收藏</button>'
-            + '<button class="camp-btn-book" data-spot-id="' + s.spot_id + '" data-spot-name="' + s.spot_name + '" data-price="' + s.price + '">📅 預訂</button>'
+            + '<button class="camp-btn-fav" data-spot-id="' + s.spot_id + '" data-spot-name="' + s.spot_name + '"><i class="fa-solid fa-heart"></i> 收藏</button>'
+            + '<button class="camp-btn-book" data-spot-id="' + s.spot_id + '" data-spot-name="' + s.spot_name + '" data-price="' + s.price + '"><i class="fa-solid fa-calendar-check"></i> 立即預訂</button>'
             + '</div></div></div>';
         }).join('');
 
-        // Bind buttons
         list.querySelectorAll('.camp-btn-fav').forEach(function(btn) {
           btn.onclick = function() { handleFavorite(btn.dataset.spotId, btn.dataset.spotName, btn); };
         });
@@ -432,147 +680,286 @@
         });
       }
 
-      // ── Favorite ──
+      document.getElementById('camp-admin-btn').onclick = function() {
+        window.open('admin.html', '_blank');
+      };
+
+      document.getElementById('camp-browse-bar-btn').onclick = openBrowseModal;
+
+      /* ── Favorite ── */
       async function handleFavorite(spotId, spotName, btn) {
         if (!isLoggedIn()) { showModal(); return; }
         const isFav = btn.classList.contains('active');
+        btn.disabled = true;
         try {
-          btn.disabled = true;
           const res = await window.fetch(BASE + '/favorites', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ spot_id: spotId, spot_name: spotName, is_favorite: !isFav })
           });
           const data = await res.json();
-          if (!res.ok) { alert(data.error || '操作失敗'); return; }
+          if (!res.ok) { showToast('❌ ' + (data.error || '操作失敗')); return; }
           btn.classList.toggle('active');
-          btn.textContent = btn.classList.contains('active') ? '❤ 已收藏' : '❤ 收藏';
+          btn.innerHTML = btn.classList.contains('active')
+            ? '<i class="fa-solid fa-heart"></i> 已收藏'
+            : '<i class="fa-solid fa-heart"></i> 收藏';
           if (!isFav && data.coupon) {
-            showToast('收藏成功！優惠券：' + data.coupon.coupon_code + '（折抵 $' + data.coupon.discount_amount + '）');
+            showToast('🎫 收藏成功！獲得優惠券 ' + data.coupon.coupon_code + '（折抵 $' + data.coupon.discount_amount + '）');
+          } else if (!isFav) {
+            showToast('❤️ 已加入收藏！');
+          } else {
+            showToast('收藏已取消');
           }
-        } catch(e) { alert('操作失敗：' + e.message); }
+        } catch(e) { showToast('❌ 操作失敗：' + e.message); }
         finally { btn.disabled = false; }
       }
 
-      // ── Favorites List ──
+      /* ── Favorites List ── */
+      async function cancelFavorite(spotId, spotName, itemEl) {
+        itemEl.style.opacity = '0.5';
+        try {
+          const res = await window.fetch(BASE + '/favorites', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ spot_id: spotId, spot_name: spotName, is_favorite: false })
+          });
+          const data = await res.json();
+          if (!res.ok) { showToast('❌ ' + (data.error || '取消失敗')); itemEl.style.opacity = '1'; return; }
+          itemEl.style.transition = 'all 0.3s';
+          itemEl.style.opacity = '0'; itemEl.style.maxHeight = '0'; itemEl.style.overflow = 'hidden';
+          setTimeout(() => itemEl.remove(), 320);
+          showToast('已取消收藏');
+        } catch(e) { showToast('❌ 取消失敗：' + e.message); itemEl.style.opacity = '1'; }
+      }
+
       document.getElementById('camp-favorites-btn').onclick = async function() {
         if (!isLoggedIn()) { showModal(); return; }
         openOverlay('camp-fav-modal');
-        document.getElementById('camp-fav-list').innerHTML = '<p class="camp-empty">載入中...</p>';
+        document.getElementById('camp-fav-list').innerHTML = '<div class="camp-loading"><div class="spinner"></div>載入中...</div>';
         try {
           const res = await window.fetch(BASE + '/favorites/history');
           const data = await res.json();
-          const favs = data.favorites || [];
+          const favs = (data.favorites || []).filter(function(f) { return f.active; });
           if (!favs.length) {
-            document.getElementById('camp-fav-list').innerHTML = '<p class="camp-empty">還沒有收藏紀錄</p>';
+            document.getElementById('camp-fav-list').innerHTML = '<div class="camp-empty">目前沒有收藏景點</div>';
             return;
           }
-          document.getElementById('camp-fav-list').innerHTML = favs.map(function(f) {
-            const badge = f.active
-              ? '<span class="camp-badge badge-green">收藏中</span>'
-              : '<span class="camp-badge badge-gray">已取消</span>';
+          const listEl = document.getElementById('camp-fav-list');
+          listEl.innerHTML = favs.map(function(f) {
             const date = f.created_at ? new Date(f.created_at).toLocaleDateString('zh-TW') : '—';
-            const cancelDate = f.canceled_at ? new Date(f.canceled_at).toLocaleDateString('zh-TW') : null;
-            return '<div class="camp-list-item">'
-              + '<h4>' + (f.spot_name || f.spot_id) + '  ' + badge + '</h4>'
-              + '<div>收藏日期：' + date + '</div>'
-              + (cancelDate ? '<div>取消日期：' + cancelDate + '</div>' : '')
+            return '<div class="camp-list-item" style="display:flex;align-items:center;gap:12px" id="fav-' + f.spot_id + '">'
+              + '<div style="flex:1">'
+              + '<h4><i class="fa-solid fa-campground" style="color:var(--green);margin-right:6px"></i>'
+              + (f.spot_name || f.spot_id)
+              + '  <span class="camp-badge badge-green">收藏中</span></h4>'
+              + '<div class="meta">收藏日期：' + date + '</div>'
+              + '</div>'
+              + '<button class="camp-bar-btn" style="background:rgba(231,111,81,0.1);border-color:rgba(231,111,81,0.4);color:#c0392b;white-space:nowrap;flex-shrink:0" '
+              + 'data-spot-id="' + f.spot_id + '" data-spot-name="' + (f.spot_name || '') + '">✕ 取消收藏</button>'
               + '</div>';
           }).join('');
+          listEl.querySelectorAll('button[data-spot-id]').forEach(function(btn) {
+            btn.onclick = function() {
+              const item = document.getElementById('fav-' + btn.dataset.spotId);
+              cancelFavorite(btn.dataset.spotId, btn.dataset.spotName, item);
+            };
+          });
         } catch(e) {
           document.getElementById('camp-fav-list').innerHTML = '<p class="camp-error">載入失敗：' + e.message + '</p>';
         }
       };
 
-      // ── Coupons List ──
+      /* ── Coupons List ── */
       document.getElementById('camp-coupons-btn').onclick = async function() {
         if (!isLoggedIn()) { showModal(); return; }
         openOverlay('camp-coupons-modal');
-        document.getElementById('camp-coupons-list').innerHTML = '<p class="camp-empty">載入中...</p>';
+        document.getElementById('camp-coupons-list').innerHTML = '<div class="camp-loading"><div class="spinner"></div>載入中...</div>';
         try {
           const res = await window.fetch(BASE + '/coupons');
           const data = await res.json();
           const coupons = data.coupons || [];
           if (!coupons.length) {
-            document.getElementById('camp-coupons-list').innerHTML = '<p class="camp-empty">還沒有優惠券</p>';
+            document.getElementById('camp-coupons-list').innerHTML = '<div class="camp-empty">還沒有優惠券<br><small style="color:#bbb">收藏景點可獲得優惠券</small></div>';
             return;
           }
           document.getElementById('camp-coupons-list').innerHTML = coupons.map(function(c) {
             const now = Date.now();
             const isExpired = c.expires_at && c.expires_at < now;
-            const statusLabel = c.status === 'USED' ? '<span class="camp-badge badge-gray">已使用</span>'
+            const isUsed = c.status === 'USED';
+            const cls = isUsed ? 'used' : isExpired ? 'expired' : '';
+            const statusBadge = isUsed
+              ? '<span class="camp-badge badge-gray">已使用</span>'
               : isExpired ? '<span class="camp-badge badge-red">已過期</span>'
               : '<span class="camp-badge badge-green">可使用</span>';
             const expDate = c.expires_at ? new Date(c.expires_at).toLocaleDateString('zh-TW') : '—';
-            const creDate = c.created_at ? new Date(c.created_at).toLocaleDateString('zh-TW') : '—';
-            return '<div class="camp-list-item">'
-              + '<h4><code style="font-size:1.05rem;letter-spacing:1px">' + c.coupon_code + '</code>  ' + statusLabel + '</h4>'
-              + '<div>景點：' + (c.spot_name || c.spot_id || '—') + '  折扣：<strong>-$' + c.discount_amount + '</strong></div>'
-              + '<div>有效期限：' + expDate + '  |  發放日期：' + creDate + '</div>'
-              + (c.order_id ? '<div style="color:#999;font-size:0.82rem">使用於訂單：' + c.order_id + '</div>' : '')
-              + '</div>';
+            return '<div class="coupon-card ' + cls + '">'
+              + '<div class="coupon-left"><div class="discount">-$' + c.discount_amount + '</div><div class="off">折扣</div></div>'
+              + '<div class="coupon-right">'
+              + '<div class="coupon-code">' + c.coupon_code + '  ' + statusBadge + '</div>'
+              + '<div class="coupon-meta">'
+              + '<i class="fa-solid fa-campground" style="color:var(--green)"></i> ' + (c.spot_name || c.spot_id || '通用券') + '<br>'
+              + '<i class="fa-regular fa-clock" style="color:#aaa"></i> 有效期限：' + expDate
+              + (c.order_id ? '<br><i class="fa-solid fa-check" style="color:#aaa"></i> 已用於訂單：' + c.order_id.substring(0,8) + '…' : '')
+              + '</div></div></div>';
           }).join('');
         } catch(e) {
           document.getElementById('camp-coupons-list').innerHTML = '<p class="camp-error">載入失敗：' + e.message + '</p>';
         }
       };
 
-      // ── Orders List ──
+      /* ── Orders List ── */
       document.getElementById('camp-orders-btn').onclick = async function() {
         if (!isLoggedIn()) { showModal(); return; }
         openOverlay('camp-orders-modal');
-        document.getElementById('camp-orders-list').innerHTML = '<p class="camp-empty">載入中...</p>';
+        document.getElementById('camp-orders-list').innerHTML = '<div class="camp-loading"><div class="spinner"></div>載入中...</div>';
         try {
           const res = await window.fetch(BASE + '/orders');
           const data = await res.json();
           const orders = data.orders || [];
           if (!orders.length) {
-            document.getElementById('camp-orders-list').innerHTML = '<p class="camp-empty">還沒有訂單記錄</p>';
+            document.getElementById('camp-orders-list').innerHTML = '<div class="camp-empty">還沒有訂單記錄</div>';
             return;
           }
-          document.getElementById('camp-orders-list').innerHTML = orders.map(function(o) {
-            const date = o.created_at ? new Date(o.created_at).toLocaleDateString('zh-TW') : '—';
+          const listEl = document.getElementById('camp-orders-list');
+          listEl.innerHTML = orders.map(function(o) {
+            const date    = o.created_at ? new Date(o.created_at).toLocaleDateString('zh-TW') : '—';
             const checkIn  = o.check_in_date  || '—';
             const checkOut = o.check_out_date || '—';
             const nights   = o.nights || 1;
-            const discount = o.discount_amount > 0 ? '折扣 -$' + o.discount_amount + '  ' : '';
-            return '<div class="camp-list-item">'
-              + '<h4>' + (o.spot_name || o.spot_id) + '  <span class="camp-badge badge-green">' + (o.status || 'confirmed') + '</span></h4>'
-              + '<div>入住：' + checkIn + '  退房：' + checkOut + '  (' + nights + ' 晚)</div>'
-              + '<div>每晚 $' + o.unit_price + '  小計 $' + o.total + '  ' + discount + '<strong>應付 $' + o.final_total + '</strong></div>'
-              + (o.coupon_code ? '<div>使用優惠券：' + o.coupon_code + '</div>' : '')
-              + '<div style="color:#999;font-size:0.82rem">訂單編號：' + (o.order_id || '—') + '  |  建立：' + date + '</div>'
+            const isCancelled = o.status === 'cancelled';
+            const statusBadge = isCancelled
+              ? '<span class="camp-badge badge-red">已取消</span>'
+              : '<span class="camp-badge badge-green">' + (o.status || 'confirmed') + '</span>';
+            return '<div class="camp-list-item" id="order-' + o.order_id + '">'
+              + '<div style="display:flex;align-items:flex-start;gap:12px">'
+              + '<div style="flex:1">'
+              + '<h4><i class="fa-solid fa-tent" style="color:var(--green);margin-right:6px"></i>'
+              + (o.spot_name || o.spot_id) + '  ' + statusBadge
+              + (o.coupon_code ? '  <span class="camp-badge badge-orange"><i class="fa-solid fa-tag"></i> ' + o.coupon_code + '</span>' : '')
+              + '</h4>'
+              + '<div class="meta">'
+              + '<i class="fa-regular fa-calendar-check" style="color:var(--green)"></i> ' + checkIn
+              + '  →  <i class="fa-regular fa-calendar-xmark" style="color:#e74c3c"></i> ' + checkOut
+              + '  (' + nights + ' 晚)'
+              + '</div>'
+              + '<div class="meta" style="margin-top:3px">'
+              + '每晚 $' + o.unit_price
+              + '　小計 $' + o.total
+              + (o.discount_amount > 0 ? '　<span style="color:#e74c3c">折扣 -$' + o.discount_amount + '</span>' : '')
+              + '　<span class="amount">應付 $' + o.final_total + '</span>'
+              + '</div>'
+              + '<div class="meta" style="color:#bbb;font-size:0.78rem;margin-top:4px">'
+              + '訂單：' + (o.order_id || '—') + '　建立：' + date
+              + '</div>'
+              + '</div>'
+              + (!isCancelled ? '<button class="camp-bar-btn" style="background:rgba(231,111,81,0.1);border-color:rgba(231,111,81,0.4);color:#c0392b;white-space:nowrap;flex-shrink:0;align-self:center" data-order-id="' + o.order_id + '" onclick="window._cancelOrder(this)">✕ 取消訂單</button>' : '')
+              + '</div>'
+              + (!isCancelled ? '<button class="camp-status-btn" data-order-id="' + o.order_id + '" onclick="window._showProcessingStatus(this)">'
+              + '<i class="fa-solid fa-magnifying-glass"></i> 查看處理狀態'
+              + '</button>' : '')
+              + '<div class="camp-processing-status" id="ps-' + o.order_id + '" style="display:none"></div>'
               + '</div>';
           }).join('');
+          // delegate cancel handler after DOM insertion
+          listEl.querySelectorAll('button[data-order-id][onclick]').forEach(function() {});
         } catch(e) {
           document.getElementById('camp-orders-list').innerHTML = '<p class="camp-error">載入失敗：' + e.message + '</p>';
         }
       };
 
-      // ── Booking Modal ──
+      /* ── Cancel Order ── */
+      window._cancelOrder = async function(btn) {
+        const orderId = btn.dataset.orderId;
+        if (!confirm('確定要取消訂單 ' + orderId.substring(0, 8) + '… 嗎？\n取消後無法復原。')) return;
+        btn.disabled = true; btn.textContent = '取消中...';
+        try {
+          const res = await window.fetch(BASE + '/orders/' + orderId, { method: 'DELETE' });
+          const data = await res.json();
+          if (!res.ok) { showToast('❌ ' + (data.error || '取消失敗')); btn.disabled = false; btn.textContent = '✕ 取消訂單'; return; }
+          showToast('✅ 訂單已取消');
+          // Update item in place: swap status badge, remove cancel + status buttons
+          const item = document.getElementById('order-' + orderId);
+          if (item) {
+            const badge = item.querySelector('.camp-badge.badge-green');
+            if (badge) { badge.className = 'camp-badge badge-red'; badge.textContent = '已取消'; }
+            btn.remove();
+            const statusBtn = item.querySelector('.camp-status-btn');
+            if (statusBtn) statusBtn.remove();
+          }
+        } catch(e) { showToast('❌ 取消失敗：' + e.message); btn.disabled = false; btn.textContent = '✕ 取消訂單'; }
+      };
+
+      /* ── Processing Status ── */
+      window._showProcessingStatus = async function(btn) {
+        const orderId = btn.dataset.orderId;
+        const panel = document.getElementById('ps-' + orderId);
+        if (panel.style.display !== 'none') {
+          panel.style.display = 'none';
+          btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 查看處理狀態';
+          return;
+        }
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 查詢中...';
+        btn.disabled = true;
+        panel.style.display = 'block';
+        panel.innerHTML = '<div class="camp-loading" style="padding:16px"><div class="spinner"></div>查詢中...</div>';
+        try {
+          const res = await window.fetch(BASE + '/orders/' + orderId + '/status');
+          const data = await res.json();
+          if (!data.success) {
+            panel.innerHTML = '<p class="camp-processing-pending">⏳ ' + (data.message || '尚未處理完成，請稍後再試') + '</p>';
+          } else {
+            const s = data.status;
+            const ts = s.processed_at ? new Date(s.processed_at).toLocaleString('zh-TW') : '—';
+            function stepCard(icon, label, step) {
+              if (!step) return '';
+              const ok = step.status === 'completed';
+              const badge = ok ? '<span class="ps-badge ps-ok">✓ 完成</span>' : '<span class="ps-badge ps-pending">⏳ 處理中</span>';
+              let detail = '';
+              if (step.email) detail += '📧 ' + step.email + '<br>';
+              if (step.template) detail += '範本：' + step.template + '<br>';
+              if (step.spot_id) detail += '景點：' + step.spot_id.substring(0,8) + '…<br>';
+              if (step.action) detail += '動作：' + step.action + '<br>';
+              if (step.receipt_id) detail += '收據：' + step.receipt_id.substring(0,12) + '…<br>';
+              if (step.tier) detail += '等級：' + step.tier + '<br>';
+              if (step.nights) detail += '住宿：' + step.nights + ' 晚<br>';
+              return '<div class="ps-step-card">'
+                + '<div class="ps-step-title">' + icon + ' ' + label + badge + '</div>'
+                + (detail ? '<div class="ps-detail">' + detail + '</div>' : '')
+                + '</div>';
+            }
+            panel.innerHTML = '<div class="camp-processing-box">'
+              + '<div class="ps-header"><i class="fa-solid fa-diagram-project"></i> 處理結果 &nbsp;<span style="color:#999;font-weight:400;font-size:0.8rem">' + ts + '</span></div>'
+              + '<div class="ps-steps">'
+              + stepCard('📧', '通知', s.notification)
+              + stepCard('🏕️', '庫存', s.inventory)
+              + stepCard('🧾', '帳務', s.billing)
+              + stepCard('📊', '分析', s.analytics)
+              + '</div></div>';
+          }
+        } catch(e) {
+          panel.innerHTML = '<p class="camp-error">查詢失敗：' + e.message + '</p>';
+        } finally {
+          btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> 查看處理狀態';
+          btn.disabled = false;
+        }
+      };
+
+      /* ── Booking Modal ── */
       var _bookSpot = {};
       function toDateStr(d) { return d.toISOString().split('T')[0]; }
       function openBookModal(spotId, spotName, unitPrice) {
         if (!isLoggedIn()) { showModal(); return; }
         _bookSpot = { spotId, spotName, unitPrice };
-        document.getElementById('camp-book-title').textContent = '預訂：' + spotName;
+        document.getElementById('camp-book-title').textContent = spotName;
         document.getElementById('book-coupon').value = '';
         document.getElementById('camp-book-msg').textContent = '';
         document.getElementById('camp-book-msg').className = '';
 
-        // Default: checkin = tomorrow, checkout = day after tomorrow
         const today = new Date();
         const d1 = new Date(today); d1.setDate(d1.getDate() + 1);
         const d2 = new Date(today); d2.setDate(d2.getDate() + 2);
-        const todayStr = toDateStr(today);
-        const d1Str = toDateStr(d1);
-        const d2Str = toDateStr(d2);
-
         const ciEl = document.getElementById('book-checkin');
         const coEl = document.getElementById('book-checkout');
-        ciEl.min = todayStr;
-        ciEl.value = d1Str;
-        coEl.min = d1Str;  // checkout must be after checkin
-        coEl.value = d2Str;
+        ciEl.min = toDateStr(today); ciEl.value = toDateStr(d1);
+        coEl.min = toDateStr(d1);    coEl.value = toDateStr(d2);
         updateBookSummary();
         openOverlay('camp-book-modal');
       }
@@ -580,7 +967,6 @@
       function updateBookSummary() {
         const ci = document.getElementById('book-checkin').value;
         const co = document.getElementById('book-checkout').value;
-        // Update checkout min whenever checkin changes
         if (ci) {
           const coEl = document.getElementById('book-checkout');
           coEl.min = ci;
@@ -589,20 +975,19 @@
             coEl.value = toDateStr(next);
           }
         }
-        if (!ci || !co) { return; }
+        if (!ci || !co || !_bookSpot.unitPrice) return;
         const nights = Math.max(1, Math.round((new Date(co) - new Date(ci)) / 86400000));
         const total = _bookSpot.unitPrice * nights;
         document.getElementById('sum-nights').textContent = nights + ' 晚';
-        document.getElementById('sum-unit').textContent = '$' + _bookSpot.unitPrice;
-        document.getElementById('sum-total').textContent = '$' + total;
+        document.getElementById('sum-unit').textContent   = '$' + _bookSpot.unitPrice;
+        document.getElementById('sum-total').textContent  = '$' + total;
         document.getElementById('sum-discount').textContent = '輸入優惠券後計算';
-        document.getElementById('sum-final').textContent = '$' + total + ' (含優惠券後更新)';
+        document.getElementById('sum-final').textContent  = '$' + total;
       }
 
-      document.getElementById('book-checkin').addEventListener('change', updateBookSummary);
-      document.getElementById('book-checkin').addEventListener('input', updateBookSummary);
-      document.getElementById('book-checkout').addEventListener('change', updateBookSummary);
-      document.getElementById('book-checkout').addEventListener('input', updateBookSummary);
+      ['book-checkin','book-checkout'].forEach(id => {
+        document.getElementById(id).addEventListener('change', updateBookSummary);
+      });
 
       document.getElementById('camp-book-submit').onclick = async function() {
         const ci = document.getElementById('book-checkin').value;
@@ -610,27 +995,22 @@
         const coupon = document.getElementById('book-coupon').value.trim();
         const msgEl = document.getElementById('camp-book-msg');
 
-        if (!ci || !co) { msgEl.textContent = '請選擇入住與退房日期'; msgEl.className = 'err'; return; }
-        if (new Date(co) <= new Date(ci)) { msgEl.textContent = '退房日期必須晚於入住日期'; msgEl.className = 'err'; return; }
+        if (!ci || !co) { msgEl.textContent = '⚠️ 請選擇入住與退房日期'; msgEl.className = 'err'; return; }
+        if (new Date(co) <= new Date(ci)) { msgEl.textContent = '⚠️ 退房日期必須晚於入住日期'; msgEl.className = 'err'; return; }
 
         const ts = Date.now();
         const email = localStorage.getItem('camping_user_email') || '';
         const payload = {
-          event_type: 'booking',
-          event_id: 'evt-' + ts,
-          order_id: 'ord-' + ts,
-          ts: ts,
-          session_id: 'web-' + ts,
-          user_email: email,
-          product_id: _bookSpot.spotId,
+          event_type: 'ORDER_CREATED', event_id: 'evt-' + ts,
+          order_id: 'ord-' + ts, ts: ts, session_id: 'web-' + ts,
+          user_email: email, product_id: _bookSpot.spotId,
           product_name: _bookSpot.spotName,
-          check_in_date: ci,
-          check_out_date: co
+          check_in_date: ci, check_out_date: co
         };
         if (coupon) payload.coupon_code = coupon;
 
         const btn = document.getElementById('camp-book-submit');
-        btn.disabled = true; btn.textContent = '預訂中...';
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 預訂中...';
         try {
           const res = await window.fetch(BASE + '/checkout', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -638,48 +1018,36 @@
           });
           const data = await res.json();
           if (!res.ok) {
-            msgEl.textContent = data.error || data.detail || '預訂失敗';
-            msgEl.className = 'err';
-            return;
+            msgEl.textContent = '❌ ' + (data.error || data.detail || '預訂失敗');
+            msgEl.className = 'err'; return;
           }
           const nights = data.nights || 1;
           const disc = data.discount_amount > 0 ? '，折扣 -$' + data.discount_amount : '';
           msgEl.textContent = '✅ 預訂成功！' + nights + ' 晚，應付 $' + data.final_total + disc;
           msgEl.className = 'ok';
-          // Update summary
-          document.getElementById('sum-nights').textContent = nights + ' 晚';
-          document.getElementById('sum-unit').textContent = '$' + data.unit_price;
-          document.getElementById('sum-total').textContent = '$' + data.total;
-          document.getElementById('sum-discount').textContent = data.discount_amount > 0 ? '-$' + data.discount_amount : '$0';
-          document.getElementById('sum-final').textContent = '$' + data.final_total;
+          document.getElementById('sum-nights').textContent  = nights + ' 晚';
+          document.getElementById('sum-unit').textContent    = '$' + data.unit_price;
+          document.getElementById('sum-total').textContent   = '$' + data.total;
+          document.getElementById('sum-discount').textContent= data.discount_amount > 0 ? '-$' + data.discount_amount : '$0';
+          document.getElementById('sum-final').textContent   = '$' + data.final_total;
+          showToast('🎉 預訂成功！共 ' + nights + ' 晚，應付 $' + data.final_total);
         } catch(e) {
-          msgEl.textContent = '預訂失敗：' + e.message; msgEl.className = 'err';
+          msgEl.textContent = '❌ 預訂失敗：' + e.message; msgEl.className = 'err';
         } finally {
           btn.disabled = false; btn.textContent = '確認預訂';
         }
       };
 
-      // ── Toast ──
-      function showToast(msg) {
-        var t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
-          + 'background:#2d6a4f;color:#fff;padding:10px 24px;border-radius:8px;font-size:0.9rem;'
-          + 'z-index:10001;box-shadow:0 4px 16px rgba(0,0,0,0.2);max-width:90vw;text-align:center;';
-        document.body.appendChild(t);
-        setTimeout(function() { t.remove(); }, 3500);
-      }
-
-      // ── Hook React buttons ──
+      /* ── Hook React buttons ── */
       const observer = new MutationObserver(function () {
         document.querySelectorAll('button').forEach(function (btn) {
           if (btn.dataset.campHooked) return;
           const text = btn.textContent.trim();
           if (text === 'Sign in' || text === 'Sign up') {
             btn.dataset.campHooked = '1';
+            btn.style.display = isLoggedIn() ? 'none' : '';
             btn.addEventListener('click', function (e) {
-              e.stopPropagation();
-              showModal();
+              e.stopPropagation(); showModal();
               if (text === 'Sign up') document.getElementById('tab-register').click();
               else document.getElementById('tab-login').click();
             });
