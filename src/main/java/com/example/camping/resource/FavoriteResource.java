@@ -3,11 +3,8 @@ package com.example.camping.resource;
 import com.example.camping.model.Coupon;
 import com.example.camping.model.CouponStatus;
 import com.example.camping.model.Favorite;
-import com.example.camping.observability.InstanaTracing;
 import com.example.camping.repository.CouponRepository;
 import com.example.camping.repository.FavoriteRepository;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
 import com.example.camping.model.AuthenticatedUser;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
@@ -42,10 +39,8 @@ public class FavoriteResource {
     AuthenticatedUser authenticatedUser;
 
     @POST
-    @Span(type = Span.Type.ENTRY, value = InstanaTracing.FAVORITE_HTTP_SPAN, captureArguments = true, capturedStackFrames = 5)
-    public Map<String, Object> trackFavorite(
-            @TagParam("payload") Map<String, Object> payload) {
-        InstanaTracing.httpEntry(InstanaTracing.FAVORITE_HTTP_SPAN, "POST", "/api/favorites", 200);
+        public Map<String, Object> trackFavorite(
+            Map<String, Object> payload) {
         
         // 從 JWT 取得 userId
         String userId = authenticatedUser.getUserId();
@@ -58,13 +53,6 @@ public class FavoriteResource {
         String spotId = stringValue(payload.get("spot_id"));
         String spotName = stringValue(payload.get("spot_name"));
         
-        InstanaTracing.entry(InstanaTracing.FAVORITE_HTTP_SPAN, "tags.user.id", userId);
-        InstanaTracing.entry(InstanaTracing.FAVORITE_HTTP_SPAN, "tags.favorite.enabled", Boolean.toString(favorite));
-        InstanaTracing.entry(InstanaTracing.FAVORITE_HTTP_SPAN, "tags.spot.id", spotId);
-        InstanaTracing.entry(InstanaTracing.FAVORITE_HTTP_SPAN, "tags.spot.name", spotName);
-
-        LOGGER.warn("[FAVORITE] track - userId: " + userId + " spot_id: " + spotId +
-                " spot_name: " + spotName + " is_favorite: " + favorite);
 
         // 檢查是否已收藏
         boolean exists = favoriteRepository.existsByUserAndSpot(userId, spotId);
@@ -124,11 +112,7 @@ public class FavoriteResource {
         
         try {
             couponRepository.save(coupon);
-            LOGGER.warn("[FAVORITE] coupon created - userId: " + userId +
-                    " spot_id: " + spotId + " coupon_code: " + couponCode);
         } catch (Exception e) {
-            LOGGER.error("[FAVORITE] failed to create coupon - userId: " + userId +
-                    " spot_id: " + spotId, e);
             // 即使優惠券建立失敗,仍然返回成功(收藏已建立)
         }
         
@@ -147,9 +131,7 @@ public class FavoriteResource {
     }
 
     @GET
-    @Span(type = Span.Type.ENTRY, value = InstanaTracing.FAVORITE_LIST_HTTP_SPAN, capturedStackFrames = 5)
-    public Map<String, Object> listFavorites() {
-        InstanaTracing.httpEntry(InstanaTracing.FAVORITE_LIST_HTTP_SPAN, "GET", "/api/favorites", 200);
+        public Map<String, Object> listFavorites() {
         
         // 從 JWT 取得 userId
         String userId = authenticatedUser.getUserId();
@@ -158,7 +140,6 @@ public class FavoriteResource {
             throw new jakarta.ws.rs.NotAuthorizedException("未授權的請求");
         }
 
-        InstanaTracing.entry(InstanaTracing.FAVORITE_LIST_HTTP_SPAN, "tags.user.id", userId);
         LOGGER.warn("[FAVORITE] list - userId: " + userId);
 
         // 查詢使用者的有效收藏
@@ -189,10 +170,7 @@ public class FavoriteResource {
         return value == null ? "" : value.toString();
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.COUPON_CODE_SPAN, captureArguments = true, captureReturn = true)
-    private String generateUniqueCouponCode(@TagParam("spot_id") String spotId) {
-        InstanaTracing.method(InstanaTracing.COUPON_CODE_SPAN, FavoriteResource.class.getName(), "generateUniqueCouponCode");
-        InstanaTracing.intermediate(InstanaTracing.COUPON_CODE_SPAN, "tags.spot.id", spotId);
+        private String generateUniqueCouponCode(String spotId) {
         
         // 格式: CAMP-{spotId前8碼}-{隨機4碼}
         String spotPrefix = spotId == null || spotId.length() < 8 ?

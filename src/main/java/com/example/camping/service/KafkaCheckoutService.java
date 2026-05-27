@@ -2,10 +2,6 @@ package com.example.camping.service;
 
 import com.example.camping.config.AppConfig;
 import com.example.camping.dto.OrderPayload;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
-import com.instana.sdk.support.SpanSupport;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -58,11 +54,8 @@ public class KafkaCheckoutService {
 
     private KafkaProducer<String, GenericRecord> producer;
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.KAFKA_SEND_SPAN, captureArguments = true, capturedStackFrames = 5)
-    public synchronized void send(@TagParam("order") OrderPayload order) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.KAFKA_SEND_SPAN, KafkaCheckoutService.class.getName(), "send");
+    public synchronized void send(OrderPayload order) {
         KafkaProducer<String, GenericRecord> currentProducer = getProducer();
-        InstanaTracing.kafkaExit(config.kafkaTopicName(), order.getEventId(), order.getEventType());
         ProducerRecord<String, GenericRecord> record = new ProducerRecord<>(
                 config.kafkaTopicName(),
                 order.getEventId(),
@@ -75,27 +68,18 @@ public class KafkaCheckoutService {
             LOGGER.info(() -> "Checkout event sent to Kafka topic " + config.kafkaTopicName() + ": " + order.getEventId());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.KAFKA_SEND_SPAN, e);
             throw new IllegalStateException("Interrupted while sending checkout event to Kafka", e);
         } catch (ExecutionException e) {
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.KAFKA_SEND_SPAN, e);
             throw new IllegalStateException("Failed to send checkout event to Kafka", e);
         }
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = "camping-kafka-trace-headers", capturedStackFrames = 5)
     private void addInstanaTraceHeaders(ProducerRecord<String, GenericRecord> record) {
         Map<String, String> traceHeaders = new HashMap<>();
-        SpanSupport.addTraceHeadersIfTracing(Span.Type.EXIT, traceHeaders);
-        InstanaTracing.intermediate("camping-kafka-trace-headers", "tags.trace_header.count", Integer.toString(traceHeaders.size()));
         traceHeaders.forEach((key, value) -> record.headers().add(key, value.getBytes(StandardCharsets.UTF_8)));
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.KAFKA_PRODUCER_INIT_SPAN, capturedStackFrames = 5)
     private KafkaProducer<String, GenericRecord> getProducer() {
-        InstanaTracing.method(InstanaTracing.KAFKA_PRODUCER_INIT_SPAN, KafkaCheckoutService.class.getName(), "getProducer");
-        InstanaTracing.intermediate(InstanaTracing.KAFKA_PRODUCER_INIT_SPAN, "tags.kafka.bootstrap", config.kafkaBootstrapServer());
-        InstanaTracing.intermediate(InstanaTracing.KAFKA_PRODUCER_INIT_SPAN, "tags.kafka.topic", config.kafkaTopicName());
         if (producer == null) {
             Properties properties = new Properties();
             properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.kafkaBootstrapServer());
@@ -110,12 +94,7 @@ public class KafkaCheckoutService {
         return producer;
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.KAFKA_RECORD_SPAN, captureArguments = true, captureReturn = true, capturedStackFrames = 5)
-    private GenericRecord toGenericRecord(@TagParam("order") OrderPayload order) {
-        InstanaTracing.method(InstanaTracing.KAFKA_RECORD_SPAN, KafkaCheckoutService.class.getName(), "toGenericRecord");
-        InstanaTracing.intermediate(InstanaTracing.KAFKA_RECORD_SPAN, "tags.event.id", order.getEventId());
-        InstanaTracing.intermediate(InstanaTracing.KAFKA_RECORD_SPAN, "tags.event.type", order.getEventType());
-        InstanaTracing.intermediate(InstanaTracing.KAFKA_RECORD_SPAN, "tags.kafka.topic", config.kafkaTopicName());
+    private GenericRecord toGenericRecord(OrderPayload order) {
         GenericRecord record = new GenericData.Record(RAW_EVENT_SCHEMA);
         record.put("event_type", order.getEventType());
         record.put("event_id", order.getEventId());
@@ -136,9 +115,7 @@ public class KafkaCheckoutService {
     }
 
     @PreDestroy
-    @Span(type = Span.Type.INTERMEDIATE, value = "camping-kafka-producer-close")
     public void close() {
-        InstanaTracing.method("camping-kafka-producer-close", KafkaCheckoutService.class.getName(), "close");
         if (producer != null) {
             producer.flush();
             producer.close();

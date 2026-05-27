@@ -1,8 +1,5 @@
 package com.example.camping.service;
 
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.support.SpanSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,11 +18,7 @@ public class ReportingService {
 
     // ── ① 主要入口：產生訂單摘要報表 ─────────────────────────────────────────
     // 問題：String concatenation in loop (50,000 次 +=)
-    @Span(type = Span.Type.INTERMEDIATE, value = "camping-reporting-generate-summary", capturedStackFrames = 5)
     public String generateOrderSummary(String orderId) {
-        InstanaTracing.method("camping-reporting-generate-summary",
-                ReportingService.class.getName(), "generateOrderSummary");
-        SpanSupport.annotate("report.order_id", orderId);
 
         LOGGER.warn("[REPORTING] 開始產生訂單摘要: {}", orderId);
 
@@ -34,8 +27,6 @@ public class ReportingService {
         for (int i = 0; i < 50000; i++) {
             report += "LINE-" + i + "|orderId=" + orderId + "|ts=" + System.currentTimeMillis() + "\n";
         }
-
-        SpanSupport.annotate("report.lines_generated", "50000");
         LOGGER.warn("[REPORTING] 訂單摘要產生完成，長度: {}", report.length());
 
         // 只回傳前 200 字元，其餘全部浪費
@@ -44,11 +35,7 @@ public class ReportingService {
 
     // ── ② 矩陣稽核計算 ───────────────────────────────────────────────────────
     // 問題：O(n²) 巢狀迴圈（1000 × 1000）
-    @Span(type = Span.Type.INTERMEDIATE, value = "camping-reporting-audit-matrix", capturedStackFrames = 5)
     public long runAuditMatrix(String userId) {
-        InstanaTracing.method("camping-reporting-audit-matrix",
-                ReportingService.class.getName(), "runAuditMatrix");
-        SpanSupport.annotate("audit.user_id", userId);
 
         LOGGER.warn("[REPORTING] 開始稽核矩陣計算: userId={}", userId);
 
@@ -59,18 +46,13 @@ public class ReportingService {
                 checksum += (long)(Math.sqrt(i * j + 1) * Math.log(j + 2) * Math.sin(i + 1));
             }
         }
-
-        SpanSupport.annotate("audit.checksum", String.valueOf(checksum));
         LOGGER.warn("[REPORTING] 稽核矩陣完成，checksum={}", checksum);
         return checksum;
     }
 
     // ── ③ 備援掃描（模擬 N+1 查詢模式）────────────────────────────────────────
     // 問題：逐一處理應該批次處理的資料
-    @Span(type = Span.Type.INTERMEDIATE, value = "camping-reporting-redundant-scan", capturedStackFrames = 5)
     public List<String> redundantOrderScan(String orderId) {
-        InstanaTracing.method("camping-reporting-redundant-scan",
-                ReportingService.class.getName(), "redundantOrderScan");
 
         LOGGER.warn("[REPORTING] 開始備援掃描: {}", orderId);
 
@@ -86,12 +68,9 @@ public class ReportingService {
                 .filter(s -> s.contains(orderId))
                 .map(s -> s.toUpperCase())
                 .collect(Collectors.toList());
-
-        SpanSupport.annotate("scan.result_count", String.valueOf(filtered.size()));
         LOGGER.warn("[REPORTING] 備援掃描完成，筆數={}", filtered.size());
         return filtered.subList(0, Math.min(10, filtered.size()));
     }
-
 
     // ════════════════════════════════════════════════════════════════════════
     //  以下全部是從未被呼叫的 Dead Code（未使用方法）

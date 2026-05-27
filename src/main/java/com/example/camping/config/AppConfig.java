@@ -26,10 +26,6 @@ public class AppConfig {
 
     public String mongoUri() {
         return env("MONGODB_URI",
-                "mongodb://wyattlu25_db_user:%21QAZ2wsx@" +
-                "ac-llvix9x-shard-00-00.v90cyby.mongodb.net:27017," +
-                "ac-llvix9x-shard-00-01.v90cyby.mongodb.net:27017," +
-                "ac-llvix9x-shard-00-02.v90cyby.mongodb.net:27017" +
                 "/?authSource=admin&replicaSet=atlas-lgdvwi-shard-0&tls=true&appName=Cluster0");
     }
 

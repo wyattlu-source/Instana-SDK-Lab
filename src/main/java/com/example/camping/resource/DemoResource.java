@@ -1,8 +1,5 @@
 package com.example.camping.resource;
 
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.support.SpanSupport;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -50,13 +47,7 @@ public class DemoResource {
     // ── Scenario 1: spot-service 服務未啟動 ──────────────────────────────────
     @GET
     @Path("/spot-error/service-down")
-    @Span(type = Span.Type.ENTRY, value = "camping-demo-spot-service-down", capturedStackFrames = 5)
     public Response spotServiceDown() {
-        InstanaTracing.httpEntry("camping-demo-spot-service-down",
-                "GET", "/api/demo/spot-error/service-down", 503);
-        SpanSupport.annotate("tags.demo.scenario", "spot-service-down");
-        SpanSupport.annotate("tags.demo.description", "模擬 spot-service 服務未啟動");
-        SpanSupport.annotate("tags.spot.target_url", SPOT_DOWN_URL);
 
         LOGGER.info("[DEMO] triggering spot-service connection-refused at {}", SPOT_DOWN_URL);
 
@@ -80,12 +71,7 @@ public class DemoResource {
     // ── Scenario 2: MongoDB 帳號密碼錯誤 ─────────────────────────────────────
     @GET
     @Path("/mongo-error/auth-failure")
-    @Span(type = Span.Type.ENTRY, value = "camping-demo-mongo-auth-failure", capturedStackFrames = 5)
     public Response mongoAuthFailure() {
-        InstanaTracing.httpEntry("camping-demo-mongo-auth-failure",
-                "GET", "/api/demo/mongo-error/auth-failure", 503);
-        SpanSupport.annotate("tags.demo.scenario", "mongodb-auth-failure");
-        SpanSupport.annotate("tags.demo.description", "模擬 MongoDB 帳號密碼錯誤（wrong_user / WrongPass）");
 
         LOGGER.info("[DEMO] triggering MongoDB auth failure with wrong credentials");
         return runMongoProbe(MONGO_WRONG_CREDS);
@@ -94,12 +80,7 @@ public class DemoResource {
     // ── Scenario 3: MongoDB 服務未啟動 ────────────────────────────────────────
     @GET
     @Path("/mongo-error/service-down")
-    @Span(type = Span.Type.ENTRY, value = "camping-demo-mongo-service-down", capturedStackFrames = 5)
     public Response mongoServiceDown() {
-        InstanaTracing.httpEntry("camping-demo-mongo-service-down",
-                "GET", "/api/demo/mongo-error/service-down", 503);
-        SpanSupport.annotate("tags.demo.scenario", "mongodb-service-down");
-        SpanSupport.annotate("tags.demo.description", "模擬 MongoDB 服務未啟動（無法連線到 port 27099）");
 
         LOGGER.info("[DEMO] triggering MongoDB service-down at port 27099");
         return runMongoProbe(MONGO_DOWN_URI);
@@ -115,12 +96,6 @@ public class DemoResource {
         LOGGER.error("[DEMO] spot-service error [{}] at {}: {}", errorType, targetUrl, e.getMessage());
 
         // ── SDK：詳細標籤，在 Instana 瀑布圖中清楚可見 ──
-        SpanSupport.annotate("tags.error",               "true");
-        SpanSupport.annotate("tags.spot.error_type",     errorType);
-        SpanSupport.annotate("tags.spot.error_hint",     hint);
-        SpanSupport.annotate("tags.spot.error_class",    e.getClass().getSimpleName());
-        SpanSupport.annotate("tags.spot.error_cause",    causeClass);
-        SpanSupport.annotate("tags.spot.error_message",  e.getMessage() != null ? e.getMessage() : "null");
 
         Map<String, Object> body = new HashMap<>();
         body.put("status",       "error");
@@ -144,13 +119,6 @@ public class DemoResource {
             LOGGER.error("[DEMO] MongoDB error [{}]: {}", errorType, e.getMessage());
 
             // ── SDK：詳細標籤 ──
-            SpanSupport.annotate("tags.error",              "true");
-            SpanSupport.annotate("tags.db.type",            "mongodb");
-            SpanSupport.annotate("tags.db.error_type",      errorType);
-            SpanSupport.annotate("tags.db.error_hint",      hint);
-            SpanSupport.annotate("tags.db.error_class",     e.getClass().getSimpleName());
-            SpanSupport.annotate("tags.db.error_cause",     causeClass);
-            SpanSupport.annotate("tags.db.error_message",   e.getMessage() != null ? e.getMessage() : "null");
 
             Map<String, Object> body = new HashMap<>();
             body.put("status",       "error");

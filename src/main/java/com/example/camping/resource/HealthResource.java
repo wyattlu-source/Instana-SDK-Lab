@@ -1,8 +1,6 @@
 package com.example.camping.resource;
 
 import com.example.camping.config.AppConfig;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -28,10 +26,7 @@ public class HealthResource {
     com.example.camping.config.MongoConfig mongoConfig;
 
     @GET
-    @Span(type = Span.Type.ENTRY, value = InstanaTracing.HEALTH_HTTP_SPAN, capturedStackFrames = 5)
     public Map<String, Object> health() {
-        InstanaTracing.httpEntry(InstanaTracing.HEALTH_HTTP_SPAN, "GET", "/api/health", 200);
-        InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.HEALTH_HTTP_SPAN, HealthResource.class.getName(), "health");
         return Map.of(
                 "status", "healthy",
                 "spots", "fallback",
@@ -48,13 +43,7 @@ public class HealthResource {
     /** 測試 InstanaTracing.logInfo/logWarn/logError 是否正確出現在 Instana span tags */
     @GET
     @Path("/log-test")
-    @Span(type = Span.Type.ENTRY, value = "camping-api-log-test", capturedStackFrames = 5)
     public Map<String, Object> logTest() {
-        InstanaTracing.httpEntry("camping-api-log-test", "GET", "/api/health/log-test", 200);
-
-        InstanaTracing.logInfo(LOGGER,  "[LOG-TEST] INFO  level - 這是 INFO  log，直接寫進 Instana span tag");
-        InstanaTracing.logWarn(LOGGER,  "[LOG-TEST] WARN  level - 這是 WARN  log，直接寫進 Instana span tag");
-        InstanaTracing.logError(LOGGER, "[LOG-TEST] ERROR level - 這是 ERROR log，直接寫進 Instana span tag");
 
         return Map.of(
                 "result", "ok",

@@ -2,9 +2,6 @@ package com.example.camping.repository;
 
 import com.example.camping.config.MongoConfig;
 import com.example.camping.model.User;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import jakarta.annotation.PostConstruct;
@@ -37,10 +34,7 @@ public class UserRepository {
         }
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.USER_REPO_FIND_SPAN, capturedStackFrames = 5)
-    public Optional<User> findByEmail(@TagParam("email") String email) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.USER_REPO_FIND_SPAN, UserRepository.class.getName(), "findByEmail");
-        annotateMongoExit(InstanaTracing.USER_REPO_FIND_SPAN, "find");
+    public Optional<User> findByEmail(String email) {
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findByEmail failed [{}], email: {}", mongoConfig.getErrorType(), email);
             annotateMongoUnavailable();
@@ -53,10 +47,7 @@ public class UserRepository {
         return Optional.ofNullable(doc).map(this::toUser);
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.USER_REPO_EXISTS_SPAN, capturedStackFrames = 5)
-    public boolean existsByEmail(@TagParam("email") String email) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.USER_REPO_EXISTS_SPAN, UserRepository.class.getName(), "existsByEmail");
-        annotateMongoExit(InstanaTracing.USER_REPO_EXISTS_SPAN, "count");
+    public boolean existsByEmail(String email) {
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] existsByEmail failed [{}], email: {}", mongoConfig.getErrorType(), email);
             annotateMongoUnavailable();
@@ -67,16 +58,12 @@ public class UserRepository {
                 .countDocuments(Filters.eq("email", email)) > 0;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.USER_REPO_SAVE_SPAN, capturedStackFrames = 5)
-    public void save(@TagParam("user") User user) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.USER_REPO_SAVE_SPAN, UserRepository.class.getName(), "save");
-        annotateMongoExit(InstanaTracing.USER_REPO_SAVE_SPAN, "insertOne");
+    public void save(User user) {
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用，請稍後再試");
             LOGGER.error("[MONGODB] save failed [{}], userId: {}", mongoConfig.getErrorType(), user.getUserId(), ex);
             annotateMongoUnavailable();
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.USER_REPO_SAVE_SPAN, ex);
             throw ex;
         }
         mongoConfig.getDatabase()
@@ -84,22 +71,9 @@ public class UserRepository {
                 .insertOne(toDocument(user));
     }
 
-    private void annotateMongoExit(String spanName, String operation) {
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.type", "mongodb");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.collection", COLLECTION);
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.operation", operation);
-        com.instana.sdk.support.SpanSupport.annotate("tags.service", "camping-api");
-    }
+    private void annotateMongoExit(String spanName, String operation) {}
 
-    private void annotateMongoUnavailable() {
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.error", "true");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_type",
-                mongoConfig.getErrorType() != null ? mongoConfig.getErrorType() : "unavailable");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_hint",
-                mongoConfig.getErrorHint() != null ? mongoConfig.getErrorHint() : "MongoDB 連線失敗");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.error_reason",
-                mongoConfig.getLastError() != null ? mongoConfig.getLastError() : "database not connected");
-    }
+    private void annotateMongoUnavailable() {}
 
     private User toUser(Document doc) {
         return new User(

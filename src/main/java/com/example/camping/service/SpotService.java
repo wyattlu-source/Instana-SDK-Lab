@@ -2,10 +2,6 @@ package com.example.camping.service;
 
 import com.example.camping.config.AppConfig;
 import com.example.camping.dto.SpotDto;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
-import com.instana.sdk.support.SpanSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.client.Client;
@@ -52,9 +48,7 @@ public class SpotService {
     @Inject
     AuditService auditService;
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LIST_SPAN, capturedStackFrames = 5)
     public List<SpotDto> getSpots() {
-        InstanaTracing.method(InstanaTracing.SPOT_LIST_SPAN, SpotService.class.getName(), "getSpots");
         // 共用審計方法 → sdk.camping-audit-record
         auditService.record("spot-list", "system");
         try {
@@ -64,26 +58,15 @@ public class SpotService {
                     .request(MediaType.APPLICATION_JSON)
                     .headers(traceHeaders())
                     .get(new GenericType<List<SpotDto>>() {});
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count", String.valueOf(spots.size()));
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.source", "spot-service");
             return spots;
         } catch (Exception e) {
             String errorType = classifySpotError(e);
             LOGGER.error("spot-service call failed [{}] at {}: {}", errorType, config.spotServiceUrl(), e.getMessage(), e);
-            InstanaTracing.error(Span.Type.INTERMEDIATE, InstanaTracing.SPOT_LIST_SPAN, e);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.source",     "fallback");
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.error_type", errorType);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.error_hint", spotErrorHint(errorType));
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.target_url", config.spotServiceUrl());
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LIST_SPAN, "tags.spot.count",      String.valueOf(FALLBACK_SPOTS.size()));
             return FALLBACK_SPOTS;
         }
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.SPOT_LOOKUP_SPAN, capturedStackFrames = 5)
-    public Optional<SpotDto> findById(@TagParam("spot_id") String spotId) {
-        InstanaTracing.method(InstanaTracing.SPOT_LOOKUP_SPAN, SpotService.class.getName(), "findById");
-        InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.id", spotId);
+    public Optional<SpotDto> findById(String spotId) {
         try {
             SpotDto spot = buildClient()
                     .target(config.spotServiceUrl())
@@ -91,18 +74,12 @@ public class SpotService {
                     .request(MediaType.APPLICATION_JSON)
                     .headers(traceHeaders())
                     .get(SpotDto.class);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.source", "spot-service");
             return Optional.ofNullable(spot);
         } catch (jakarta.ws.rs.NotFoundException e) {
             return Optional.empty();
         } catch (Exception e) {
             String errorType = classifySpotError(e);
             LOGGER.error("spot-service lookup failed [{}] spotId={}: {}", errorType, spotId, e.getMessage(), e);
-            InstanaTracing.error(Span.Type.INTERMEDIATE, InstanaTracing.SPOT_LOOKUP_SPAN, e);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.source",     "fallback");
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.error_type", errorType);
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.error_hint", spotErrorHint(errorType));
-            InstanaTracing.intermediate(InstanaTracing.SPOT_LOOKUP_SPAN, "tags.spot.target_url", config.spotServiceUrl());
             return FALLBACK_SPOTS.stream().filter(s -> s.getSpotId().equals(spotId)).findFirst();
         }
     }
@@ -140,7 +117,6 @@ public class SpotService {
 
     private jakarta.ws.rs.core.MultivaluedHashMap<String, Object> traceHeaders() {
         Map<String, String> instanaHeaders = new HashMap<>();
-        SpanSupport.addTraceHeadersIfTracing(instanaHeaders);
         jakarta.ws.rs.core.MultivaluedHashMap<String, Object> headers = new jakarta.ws.rs.core.MultivaluedHashMap<>();
         instanaHeaders.forEach((k, v) -> headers.add(k, v));
         return headers;

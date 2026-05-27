@@ -2,9 +2,6 @@ package com.example.camping.repository;
 
 import com.example.camping.config.MongoConfig;
 import com.example.camping.model.Favorite;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Updates;
@@ -60,18 +57,11 @@ public class FavoriteRepository {
         }
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_SAVE_SPAN, capturedStackFrames = 5)
-    public void save(@TagParam("favorite") Favorite favorite) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_SAVE_SPAN, 
-                FavoriteRepository.class.getName(), "save");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_SAVE_SPAN, "insertOne");
+        public void save(Favorite favorite) {
         
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用,請稍後再試");
-            LOGGER.error("[MONGODB] save failed - database unavailable, favoriteId: " + 
-                    favorite.getFavoriteId(), ex);
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_SAVE_SPAN, ex);
             throw ex;
         }
 
@@ -84,15 +74,9 @@ public class FavoriteRepository {
                 .getCollection(COLLECTION)
                 .insertOne(toDocument(favorite));
         
-        LOGGER.warn("[MONGODB] Favorite saved - favoriteId: " + favorite.getFavoriteId() +
-                ", userId: " + favorite.getUserId() + ", spotId: " + favorite.getSpotId());
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_FIND_BY_USER_SPAN, capturedStackFrames = 5)
-    public List<Favorite> findByUserId(@TagParam("userId") String userId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_FIND_BY_USER_SPAN,
-                FavoriteRepository.class.getName(), "findByUserId");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_FIND_BY_USER_SPAN, "find");
+        public List<Favorite> findByUserId(String userId) {
         
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findByUserId failed - database unavailable, userId: " + userId);
@@ -109,11 +93,7 @@ public class FavoriteRepository {
         return favorites;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_FIND_ACTIVE_SPAN, capturedStackFrames = 5)
-    public List<Favorite> findActiveByUserId(@TagParam("userId") String userId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_FIND_ACTIVE_SPAN,
-                FavoriteRepository.class.getName(), "findActiveByUserId");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_FIND_ACTIVE_SPAN, "find");
+        public List<Favorite> findActiveByUserId(String userId) {
         
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findActiveByUserId failed - database unavailable, userId: " + userId);
@@ -137,15 +117,9 @@ public class FavoriteRepository {
         return favorites;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_EXISTS_SPAN, capturedStackFrames = 5)
-    public boolean existsByUserAndSpot(@TagParam("userId") String userId, @TagParam("spotId") String spotId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_EXISTS_SPAN,
-                FavoriteRepository.class.getName(), "existsByUserAndSpot");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_EXISTS_SPAN, "count");
+        public boolean existsByUserAndSpot(String userId, String spotId) {
         
         if (!mongoConfig.isAvailable()) {
-            LOGGER.error("[MONGODB] existsByUserAndSpot failed - database unavailable, userId: " + 
-                    userId + ", spotId: " + spotId);
             return false;
         }
 
@@ -159,18 +133,11 @@ public class FavoriteRepository {
                 .countDocuments(filter) > 0;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_CANCEL_SPAN, capturedStackFrames = 5)
-    public void cancelFavorite(@TagParam("userId") String userId, @TagParam("spotId") String spotId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_CANCEL_SPAN,
-                FavoriteRepository.class.getName(), "cancelFavorite");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_CANCEL_SPAN, "updateOne");
+        public void cancelFavorite(String userId, String spotId) {
         
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用,請稍後再試");
-            LOGGER.error("[MONGODB] cancelFavorite failed - database unavailable, userId: " + 
-                    userId + ", spotId: " + spotId, ex);
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_CANCEL_SPAN, ex);
             throw ex;
         }
 
@@ -191,18 +158,11 @@ public class FavoriteRepository {
         LOGGER.warn("[MONGODB] Favorite canceled - userId: " + userId + ", spotId: " + spotId);
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.FAVORITE_REPO_REACTIVATE_SPAN, capturedStackFrames = 5)
-    public void reactivateFavorite(@TagParam("userId") String userId, @TagParam("spotId") String spotId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_REACTIVATE_SPAN,
-                FavoriteRepository.class.getName(), "reactivateFavorite");
-        annotateMongoExit(InstanaTracing.FAVORITE_REPO_REACTIVATE_SPAN, "updateOne");
+        public void reactivateFavorite(String userId, String spotId) {
         
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用,請稍後再試");
-            LOGGER.error("[MONGODB] reactivateFavorite failed - database unavailable, userId: " + 
-                    userId + ", spotId: " + spotId, ex);
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.FAVORITE_REPO_REACTIVATE_SPAN, ex);
             throw ex;
         }
 
@@ -223,12 +183,7 @@ public class FavoriteRepository {
         LOGGER.warn("[MONGODB] Favorite reactivated - userId: " + userId + ", spotId: " + spotId);
     }
 
-    private void annotateMongoExit(String spanName, String operation) {
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.type", "mongodb");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.collection", COLLECTION);
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.operation", operation);
-        com.instana.sdk.support.SpanSupport.annotate("tags.service", "camping-api");
-    }
+    private void annotateMongoExit(String spanName, String operation) {}
 
     private Favorite toFavorite(Document doc) {
         return new Favorite(

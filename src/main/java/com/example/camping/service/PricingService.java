@@ -1,10 +1,6 @@
 package com.example.camping.service;
 
 import com.example.camping.dto.SpotDto;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
-import com.instana.sdk.support.SpanSupport;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -31,16 +27,9 @@ public class PricingService {
         }
     }
 
-    @Span(type = Span.Type.INTERMEDIATE, value = InstanaTracing.PRICING_SPAN, capturedStackFrames = 5)
-    public int calculateTotal(@TagParam("spot_id") String spotId, @TagParam("nights") int nights) {
-        InstanaTracing.method(InstanaTracing.PRICING_SPAN, PricingService.class.getName(), "calculateTotal");
+    public int calculateTotal(String spotId, int nights) {
         int unitPrice = getUnitPrice(spotId);
         int total = unitPrice * Math.max(nights, 1);
-        SpanSupport.annotate("tags.pricing.spot_id", spotId == null ? "unknown" : spotId);
-        SpanSupport.annotate("tags.pricing.nights", String.valueOf(nights));
-        SpanSupport.annotate("tags.pricing.unit_price", String.valueOf(unitPrice));
-        SpanSupport.annotate("tags.pricing.total", String.valueOf(total));
-        SpanSupport.annotate("tags.service", "camping-api");
         LOGGER.warn("[PRICING] spotId=" + spotId + " nights=" + nights + " unitPrice=" + unitPrice + " total=" + total);
         return total;
     }

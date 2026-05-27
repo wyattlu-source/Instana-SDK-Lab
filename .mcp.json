@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "instana": {
+      "command": "C:\\Program Files\\Python312\\Scripts\\mcp-instana.exe",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "INSTANA_BASE_URL": "https://it-palsys.instana-k3s.palsys.com.tw",
+        "INSTANA_API_TOKEN": "9oYyUYH2Qum_QvUHHUr8bA",
+        "INSTANA_VERIFY_SSL": "false",
+        "PYTHONHTTPSVERIFY": "0",
+        "CURL_CA_BUNDLE": "",
+        "REQUESTS_CA_BUNDLE": "",
+        "SSL_CERT_FILE": "",
+        "PYTHONWARNINGS": "ignore:Unverified HTTPS request"
+      }
+    }
+  }
+}

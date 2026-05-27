@@ -5,7 +5,6 @@ import com.example.camping.model.Coupon;
 import com.example.camping.model.CouponStatus;
 import com.example.camping.model.Order;
 import com.example.camping.model.AuthenticatedUser;
-import com.example.camping.observability.InstanaTracing;
 import com.example.camping.repository.CouponRepository;
 import com.example.camping.repository.OrderRepository;
 import com.example.camping.service.AuditService;
@@ -13,10 +12,6 @@ import com.example.camping.service.KafkaCheckoutService;
 import com.example.camping.service.OrderValidateService;
 import com.example.camping.service.PricingService;
 import com.example.camping.service.ReportingService;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
-import com.instana.sdk.support.ContextSupport;
-import com.instana.sdk.support.SpanSupport;
 import jakarta.annotation.Resource;
 import jakarta.enterprise.concurrent.ManagedExecutorService;
 import jakarta.enterprise.context.RequestScoped;
@@ -58,19 +53,11 @@ public class CheckoutResource {
     ManagedExecutorService executorService;
 
     @POST
-    @Span(type = Span.Type.ENTRY, value = InstanaTracing.CHECKOUT_HTTP_SPAN, capturedStackFrames = 5)
-    public Map<String, Object> receiveCheckout(@Valid @TagParam("order") OrderPayload order) {
-        InstanaTracing.httpEntry(InstanaTracing.CHECKOUT_HTTP_SPAN, "POST", "/api/checkout", 200);
-        InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.CHECKOUT_HTTP_SPAN,
-                CheckoutResource.class.getName(), "receiveCheckout");
-
-        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] received - event_id: " + order.getEventId() +
-                " order_id: " + order.getOrderId() + " user: " + order.getUserEmail());
+    public Map<String, Object> receiveCheckout(@Valid OrderPayload order) {
+        LOGGER.warn("[CHECKOUT] received - order_id: " + order.getOrderId() + " user: " + order.getUserEmail());
 
         // 計算住宿天數
         int nights = calcNights(order.getCheckInDate(), order.getCheckOutDate());
-        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] nights: " + nights +
-                " check_in: " + order.getCheckInDate() + " check_out: " + order.getCheckOutDate());
 
         // ① 驗證訂單
         orderValidateService.validate(order);
@@ -85,34 +72,25 @@ public class CheckoutResource {
         String couponCode = order.getCouponCode();
         if (couponCode != null && !couponCode.trim().isEmpty()) {
             LOGGER.warn("[CHECKOUT] validating coupon - coupon_code: " + couponCode);
-            SpanSupport.annotate("tags.checkout.coupon_code", couponCode);
             try {
                 Optional<Coupon> couponOpt = couponRepository.findByCouponCode(couponCode);
                 if (!couponOpt.isPresent()) {
-                    LOGGER.warn("[CHECKOUT] coupon not found - coupon_code: " + couponCode);
                     throw new jakarta.ws.rs.BadRequestException("優惠券不存在");
                 }
                 Coupon coupon = couponOpt.get();
                 if (coupon.getStatus() != CouponStatus.UNUSED) {
-                    LOGGER.warn("[CHECKOUT] coupon already used or expired - coupon_code: " + couponCode);
                     throw new jakarta.ws.rs.BadRequestException("優惠券已使用或已過期");
                 }
                 long now = System.currentTimeMillis();
                 if (coupon.getExpiresAt() <= now) {
-                    LOGGER.warn("[CHECKOUT] coupon expired - coupon_code: " + couponCode);
                     throw new jakarta.ws.rs.BadRequestException("優惠券已過期");
                 }
                 boolean used = couponRepository.useCoupon(couponCode, order.getOrderId());
                 if (!used) {
-                    LOGGER.warn("[CHECKOUT] failed to use coupon - coupon_code: " + couponCode);
                     throw new jakarta.ws.rs.BadRequestException("優惠券使用失敗，可能已被使用或已過期");
                 }
                 discountAmount = coupon.getDiscountAmount();
                 finalTotal = Math.max(0, total - discountAmount);
-                InstanaTracing.logWarn(LOGGER, "[CHECKOUT] coupon applied - coupon_code: " + couponCode +
-                        " discount: " + discountAmount + " final_total: " + finalTotal);
-                SpanSupport.annotate("tags.checkout.discount_amount", String.valueOf(discountAmount));
-                SpanSupport.annotate("tags.checkout.coupon_applied", "true");
             } catch (jakarta.ws.rs.BadRequestException e) {
                 throw e;
             } catch (Exception e) {
@@ -120,9 +98,6 @@ public class CheckoutResource {
                 throw new jakarta.ws.rs.ServiceUnavailableException("優惠券驗證失敗，請稍後再試");
             }
         }
-
-        SpanSupport.annotate("tags.checkout.total", String.valueOf(total));
-        SpanSupport.annotate("tags.checkout.final_total", String.valueOf(finalTotal));
 
         // ④ 儲存訂單到 MongoDB
         String userId = authenticatedUser.getUserId();
@@ -142,8 +117,6 @@ public class CheckoutResource {
 
         // ⑤ 審計記錄
         auditService.record("checkout", order.getUserEmail());
-        SpanSupport.annotate("tags.checkout.event_id", order.getEventId());
-        SpanSupport.annotate("tags.checkout.order_id", order.getOrderId());
 
         // ⑥ 報表與稽核處理（效能瓶頸）
         try {
@@ -154,16 +127,10 @@ public class CheckoutResource {
             LOGGER.warn("[CHECKOUT] reporting step failed: {}", e.getMessage());
         }
 
-        // ⑧ 非同步送 Kafka
-        Object snapshotKey = ContextSupport.takeSnapshot();
-        executorService.submit(() -> {
-            ContextSupport.restoreSnapshot(snapshotKey);
-            runCheckoutJob(order);
-        });
+        // ⑦ 非同步送 Kafka
+        executorService.submit(() -> runCheckoutJob(order));
 
-        InstanaTracing.logWarn(LOGGER, "[CHECKOUT] accepted - event_id: " + order.getEventId() +
-                " nights: " + nights + " total: " + total +
-                " discount: " + discountAmount + " final_total: " + finalTotal);
+        LOGGER.warn("[CHECKOUT] accepted - order_id: " + order.getOrderId() + " nights: " + nights + " final: " + finalTotal);
 
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");

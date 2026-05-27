@@ -3,9 +3,6 @@ package com.example.camping.repository;
 import com.example.camping.config.MongoConfig;
 import com.example.camping.model.Coupon;
 import com.example.camping.model.CouponStatus;
-import com.example.camping.observability.InstanaTracing;
-import com.instana.sdk.annotation.Span;
-import com.instana.sdk.annotation.TagParam;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Updates;
@@ -68,18 +65,11 @@ public class CouponRepository {
         }
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_SAVE_SPAN, capturedStackFrames = 5)
-    public void save(@TagParam("coupon") Coupon coupon) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_SAVE_SPAN,
-                CouponRepository.class.getName(), "save");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_SAVE_SPAN, "insertOne");
+        public void save(Coupon coupon) {
 
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用,請稍後再試");
-            LOGGER.error("[MONGODB] save failed - database unavailable, couponId: " +
-                    coupon.getCouponId(), ex);
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.COUPON_REPO_SAVE_SPAN, ex);
             throw ex;
         }
 
@@ -92,15 +82,9 @@ public class CouponRepository {
                 .getCollection(COLLECTION)
                 .insertOne(toDocument(coupon));
 
-        LOGGER.warn("[MONGODB] Coupon saved - couponId: " + coupon.getCouponId() +
-                ", couponCode: " + coupon.getCouponCode() + ", userId: " + coupon.getUserId());
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_FIND_BY_USER_SPAN, capturedStackFrames = 5)
-    public List<Coupon> findByUserId(@TagParam("userId") String userId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_FIND_BY_USER_SPAN,
-                CouponRepository.class.getName(), "findByUserId");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_FIND_BY_USER_SPAN, "find");
+        public List<Coupon> findByUserId(String userId) {
 
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findByUserId failed - database unavailable, userId: " + userId);
@@ -131,11 +115,7 @@ public class CouponRepository {
         return coupons;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_FIND_AVAILABLE_SPAN, capturedStackFrames = 5)
-    public List<Coupon> findAvailableCoupons(@TagParam("userId") String userId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_FIND_AVAILABLE_SPAN,
-                CouponRepository.class.getName(), "findAvailableCoupons");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_FIND_AVAILABLE_SPAN, "find");
+        public List<Coupon> findAvailableCoupons(String userId) {
 
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findAvailableCoupons failed - database unavailable, userId: " + userId);
@@ -161,11 +141,7 @@ public class CouponRepository {
         return coupons;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_FIND_BY_CODE_SPAN, capturedStackFrames = 5)
-    public Optional<Coupon> findByCouponCode(@TagParam("couponCode") String couponCode) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_FIND_BY_CODE_SPAN,
-                CouponRepository.class.getName(), "findByCouponCode");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_FIND_BY_CODE_SPAN, "find");
+        public Optional<Coupon> findByCouponCode(String couponCode) {
 
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] findByCouponCode failed - database unavailable, couponCode: " + couponCode);
@@ -180,18 +156,11 @@ public class CouponRepository {
         return Optional.ofNullable(doc).map(this::toCoupon);
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_USE_SPAN, capturedStackFrames = 5)
-    public boolean useCoupon(@TagParam("couponCode") String couponCode, @TagParam("orderId") String orderId) {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_USE_SPAN,
-                CouponRepository.class.getName(), "useCoupon");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_USE_SPAN, "updateOne");
+        public boolean useCoupon(String couponCode, String orderId) {
 
         if (!mongoConfig.isAvailable()) {
             jakarta.ws.rs.ServiceUnavailableException ex =
                 new jakarta.ws.rs.ServiceUnavailableException("資料庫目前無法使用,請稍後再試");
-            LOGGER.error("[MONGODB] useCoupon failed - database unavailable, couponCode: " +
-                    couponCode, ex);
-            InstanaTracing.error(Span.Type.EXIT, InstanaTracing.COUPON_REPO_USE_SPAN, ex);
             throw ex;
         }
 
@@ -219,18 +188,12 @@ public class CouponRepository {
         if (success) {
             LOGGER.warn("[MONGODB] Coupon used - couponCode: " + couponCode + ", orderId: " + orderId);
         } else {
-            LOGGER.warn("[MONGODB] Coupon use failed - couponCode: " + couponCode + 
-                    " (may be already used, expired, or not found)");
         }
 
         return success;
     }
 
-    @Span(type = Span.Type.EXIT, value = InstanaTracing.COUPON_REPO_EXPIRE_SPAN, capturedStackFrames = 5)
-    public int expireOldCoupons() {
-        InstanaTracing.method(Span.Type.EXIT, InstanaTracing.COUPON_REPO_EXPIRE_SPAN,
-                CouponRepository.class.getName(), "expireOldCoupons");
-        annotateMongoExit(InstanaTracing.COUPON_REPO_EXPIRE_SPAN, "updateMany");
+        public int expireOldCoupons() {
 
         if (!mongoConfig.isAvailable()) {
             LOGGER.error("[MONGODB] expireOldCoupons failed - database unavailable");
@@ -256,12 +219,7 @@ public class CouponRepository {
         return (int) modifiedCount;
     }
 
-    private void annotateMongoExit(String spanName, String operation) {
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.type", "mongodb");
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.collection", COLLECTION);
-        com.instana.sdk.support.SpanSupport.annotate("tags.db.operation", operation);
-        com.instana.sdk.support.SpanSupport.annotate("tags.service", "camping-api");
-    }
+    private void annotateMongoExit(String spanName, String operation) {}
 
     private Coupon toCoupon(Document doc) {
         String statusValue = doc.getString("status");
