@@ -1,7 +1,7 @@
 package com.example.camping.resource;
 
 import com.example.camping.dto.EmailPayload;
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 @Path("/send_src_email")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@RequestScoped
+@ApplicationScoped
 public class NewsletterResource {
     private static final Logger LOGGER = Logger.getLogger(NewsletterResource.class.getName());
 

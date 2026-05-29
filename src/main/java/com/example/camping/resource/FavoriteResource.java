@@ -1,5 +1,6 @@
 package com.example.camping.resource;
 
+import com.example.camping.dto.FavoriteRequest;
 import com.example.camping.model.Coupon;
 import com.example.camping.model.CouponStatus;
 import com.example.camping.model.Favorite;
@@ -14,6 +15,8 @@ import jakarta.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,9 +42,7 @@ public class FavoriteResource {
     AuthenticatedUser authenticatedUser;
 
     @POST
-        public Map<String, Object> trackFavorite(
-            Map<String, Object> payload) {
-        
+    public Map<String, Object> trackFavorite(InputStream body) {
         // 從 JWT 取得 userId
         String userId = authenticatedUser.getUserId();
         if (userId == null || userId.isEmpty()) {
@@ -49,9 +50,18 @@ public class FavoriteResource {
             throw new jakarta.ws.rs.NotAuthorizedException("未授權的請求");
         }
 
-        boolean favorite = Boolean.TRUE.equals(payload.get("is_favorite"));
-        String spotId = stringValue(payload.get("spot_id"));
-        String spotName = stringValue(payload.get("spot_name"));
+        FavoriteRequest payload;
+        try {
+            String json = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            payload = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, FavoriteRequest.class);
+        } catch (Exception e) {
+            LOGGER.warn("[FAVORITE] failed to parse body: {}", e.getMessage());
+            payload = new FavoriteRequest();
+        }
+
+        boolean favorite = payload.isFavorite;
+        String spotId = payload.spotId != null ? payload.spotId : "";
+        String spotName = payload.spotName != null ? payload.spotName : "";
         
 
         // 檢查是否已收藏
