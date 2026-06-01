@@ -16,7 +16,6 @@ import jakarta.annotation.Resource;
 import jakarta.enterprise.concurrent.ManagedExecutorService;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -26,6 +25,8 @@ import jakarta.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -53,7 +54,15 @@ public class CheckoutResource {
     ManagedExecutorService executorService;
 
     @POST
-    public Map<String, Object> receiveCheckout(@Valid OrderPayload order) {
+    public Map<String, Object> receiveCheckout(InputStream body) {
+        OrderPayload order;
+        try {
+            String json = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            order = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, OrderPayload.class);
+        } catch (Exception e) {
+            LOGGER.warn("[CHECKOUT] failed to parse body: {}", e.getMessage());
+            throw new jakarta.ws.rs.BadRequestException("Invalid request body");
+        }
         LOGGER.warn("[CHECKOUT] received - order_id: " + order.getOrderId() + " user: " + order.getUserEmail());
 
         // 計算住宿天數
