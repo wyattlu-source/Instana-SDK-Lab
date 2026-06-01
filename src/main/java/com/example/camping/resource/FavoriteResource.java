@@ -17,6 +17,8 @@ import jakarta.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,10 +45,18 @@ public class FavoriteResource {
 
     @POST
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.FAVORITE_HTTP_SPAN, captureArguments = true, capturedStackFrames = 5)
-    public Map<String, Object> trackFavorite(
-            @TagParam("payload") Map<String, Object> payload) {
+    public Map<String, Object> trackFavorite(InputStream body) {
         InstanaTracing.httpEntry(InstanaTracing.FAVORITE_HTTP_SPAN, "POST", "/api/favorites", 200);
-        
+
+        Map<String, Object> payload;
+        try {
+            String json = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            payload = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class);
+        } catch (Exception e) {
+            LOGGER.warn("[FAVORITE] failed to parse body: {}", e.getMessage());
+            payload = new HashMap<>();
+        }
+
         // 從 JWT 取得 userId
         String userId = authenticatedUser.getUserId();
         if (userId == null || userId.isEmpty()) {

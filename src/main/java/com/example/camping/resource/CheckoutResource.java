@@ -21,7 +21,6 @@ import jakarta.annotation.Resource;
 import jakarta.enterprise.concurrent.ManagedExecutorService;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -31,6 +30,8 @@ import jakarta.ws.rs.core.MediaType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -59,7 +60,15 @@ public class CheckoutResource {
 
     @POST
     @Span(type = Span.Type.ENTRY, value = InstanaTracing.CHECKOUT_HTTP_SPAN, capturedStackFrames = 5)
-    public Map<String, Object> receiveCheckout(@Valid @TagParam("order") OrderPayload order) {
+    public Map<String, Object> receiveCheckout(InputStream body) {
+        OrderPayload order;
+        try {
+            String json = new String(body.readAllBytes(), StandardCharsets.UTF_8);
+            order = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, OrderPayload.class);
+        } catch (Exception e) {
+            LOGGER.warn("[CHECKOUT] failed to parse body: {}", e.getMessage());
+            throw new jakarta.ws.rs.BadRequestException("Invalid request body");
+        }
         InstanaTracing.httpEntry(InstanaTracing.CHECKOUT_HTTP_SPAN, "POST", "/api/checkout", 200);
         InstanaTracing.method(Span.Type.ENTRY, InstanaTracing.CHECKOUT_HTTP_SPAN,
                 CheckoutResource.class.getName(), "receiveCheckout");
@@ -145,17 +154,26 @@ public class CheckoutResource {
         SpanSupport.annotate("tags.checkout.event_id", order.getEventId());
         SpanSupport.annotate("tags.checkout.order_id", order.getOrderId());
 
-        // ⑥ 報表與稽核處理（效能瓶頸）
-        try {
-            reportingService.generateOrderSummary(order.getOrderId());
-            reportingService.runAuditMatrix(authenticatedUser.getUserId());
-            reportingService.redundantOrderScan(order.getOrderId());
-        } catch (Exception e) {
-            LOGGER.warn("[CHECKOUT] reporting step failed: {}", e.getMessage());
-        }
-
-        // ⑧ 非同步送 Kafka
+        // ⑥ 報表與稽核處理（已優化為非同步執行）
         Object snapshotKey = ContextSupport.takeSnapshot();
+        String finalOrderId = order.getOrderId();
+        String finalUserId = authenticatedUser.getUserId();
+        
+        executorService.submit(() -> {
+            ContextSupport.restoreSnapshot(snapshotKey);
+            try {
+                LOGGER.info("[CHECKOUT] async reporting started - order_id: {}", finalOrderId);
+                reportingService.generateOrderSummary(finalOrderId);
+                reportingService.runAuditMatrix(finalUserId);
+                reportingService.redundantOrderScan(finalOrderId);
+                LOGGER.info("[CHECKOUT] async reporting completed - order_id: {}", finalOrderId);
+            } catch (Exception e) {
+                LOGGER.warn("[CHECKOUT] async reporting failed - order_id: {}, error: {}",
+                    finalOrderId, e.getMessage());
+            }
+        });
+
+        // ⑦ 非同步送 Kafka
         executorService.submit(() -> {
             ContextSupport.restoreSnapshot(snapshotKey);
             runCheckoutJob(order);
